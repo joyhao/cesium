@@ -1,0 +1,25 @@
+{
+  "name": "cesium",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "start": "vite",
+    "build": "vue-tsc -b && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "vue": "^3.4.29"
+  },
+  "devDependencies": {
+    "3d-tiles-tools": "^0.4.2",
+    "3d-tiles-validator": "^0.5.0",
+    "@vitejs/plugin-vue": "^5.0.5",
+    "cesium": "^1.119.0",
+    "typescript": "^5.2.2",
+    "unplugin-auto-import": "^0.17.6",
+    "vite": "^5.3.2",
+    "vite-plugin-cesium": "^1.2.22",
+    "vue-tsc": "^2.0.21"
+  }
+}
