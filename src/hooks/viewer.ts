@@ -13,6 +13,9 @@ import {
 } from 'cesium';
 import { MAP } from './entity.ts';
 export function useViewer() {
+  const callback = {
+    flyTo: () => {}
+  };
   function getViewer(ele: string) {
     const viewer = new Viewer(ele, {
       infoBox: false,
@@ -84,7 +87,8 @@ export function useViewer() {
     viewer.camera.flyTo({
       destination: destination,
       orientation: orientation,
-      complete: function callback() {
+      complete: () => {
+        callback.flyTo();
         // 定位完成之后的回调函数
       }
     });
@@ -93,6 +97,7 @@ export function useViewer() {
   }
 
   return {
-    getViewer
+    getViewer,
+    callback
   };
 }

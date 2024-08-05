@@ -17,7 +17,9 @@
       ></i>
     </button>
 
-    {{ item.degrees }}
+    <label class="name">
+      {{ item.name }}
+    </label>
   </section>
 </template>
 <script setup lang="ts">
@@ -65,6 +67,13 @@ body {
   text-shadow: 0 0 8px rgba(0, 0, 0, 0.75);
   pointer-events: none;
   transform-style: preserve-3d;
+  .name {
+    position: absolute;
+    left: 0;
+    top: 0;
+    white-space: nowrap;
+    transform: translate(-50%, -50%);
+  }
   .btn {
     position: relative;
     width: 25px;
