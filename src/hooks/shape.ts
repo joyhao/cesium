@@ -14,23 +14,6 @@ export function useShape(viewer: Viewer) {
     for (let i = 0; i < address.length; i++) {
       const item = address[i];
       const scratch = new Cartesian2();
-      const nItem = address[i + 1];
-
-      if (nItem) {
-        const line = viewer.entities.add({
-          name: `${item.name}-${nItem.name}`,
-          polyline: {
-            positions: Cartesian3.fromDegreesArray([
-              ...item.degrees,
-              ...nItem.degrees
-            ]),
-            width: 5,
-            arcType: ArcType.GEODESIC,
-            material: new Color(1, 1, 1, 1),
-            clampToGround: true
-          }
-        });
-      }
 
       const position = Cartesian3.fromDegrees(item.degrees[0], item.degrees[1]);
       const canvasPosition = viewer.scene.cartesianToCanvasCoordinates(
