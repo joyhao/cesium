@@ -16,10 +16,16 @@ export function useGlobEvent(viewer: Viewer) {
   //定义canvas屏幕点击事件
   var handler = new ScreenSpaceEventHandler(viewer.scene.canvas);
 
-  viewer.camera.changed.addEventListener(() => {
+  viewer.camera.changed.addEventListener(_onChanged);
+
+  function _onChanged() {
     const pitch = _Math.toDegrees(viewer.camera.pitch);
-    callback.cameraChanged(pitch);
-  });
+    if (Math.abs(pitch) < 60) {
+      callback.cameraChanged(pitch);
+    } else {
+      callback.cameraChanged(90);
+    }
+  }
 
   function _onClick(event: ScreenSpaceEventHandler.PositionedEvent) {
     //定义一个屏幕点击的事件，pickPosition封装的是获取点击的位置的坐标

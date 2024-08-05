@@ -1,8 +1,31 @@
 const token = '7b56707d6a4618fb1835e58163ba2e10';
 // 服务域名
 const tdtUrl = 'https://t{s}.tianditu.gov.cn/';
+export interface iAddress {
+  name: string;
+  degrees: [number, number];
+  ele?: HTMLElement;
+}
 
-export const address = [
+function random() {
+  return Math.random() * 180;
+}
+
+function createAddress() {
+  const len = 100;
+  const list = [];
+  for (let i = 0; i < len; i++) {
+    const item = {
+      name: `test${i}`,
+      degrees: [random(), random()]
+    };
+    list.push(item);
+  }
+
+  return list;
+}
+
+export const address: iAddress[] = [
   {
     name: '南岸区',
     degrees: [106.5576, 29.5261]
@@ -18,8 +41,21 @@ export const address = [
   {
     name: '北碚区',
     degrees: [106.3896, 29.8086]
-  }
+  },
+  ...createAddress()
 ];
+export function getAddress() {
+  const list: iAddress[] = [];
+  address.forEach((item) => {
+    const os = {
+      ...item,
+      ele: document.getElementById(item.name) as HTMLElement
+    };
+    list.push(os);
+  });
+
+  return list;
+}
 
 export const MAP = {
   // 服务负载子域

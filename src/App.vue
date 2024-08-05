@@ -73,7 +73,7 @@ body {
     padding: 0;
     box-shadow: 0 0 8px rgba(0, 0, 0, 0.75);
     pointer-events: all;
-    transform: rotateX(var(--pitch));
+    transform: rotateX(var(--pitch)) translateX(-10px) translateY(10px);
     i {
       width: 100%;
       height: 100%;
