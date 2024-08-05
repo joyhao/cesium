@@ -1,4 +1,11 @@
-import { Cartesian2, Cartesian3, defined, Viewer } from 'cesium';
+import {
+  ArcType,
+  Cartesian2,
+  Cartesian3,
+  Color,
+  defined,
+  Viewer
+} from 'cesium';
 import { address } from './entity';
 export function useShape(viewer: Viewer) {
   for (let i = 0; i < address.length; i++) {

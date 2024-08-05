@@ -5,7 +5,7 @@ const tdtUrl = 'https://t{s}.tianditu.gov.cn/';
 export const address = [
   {
     name: '南岸区',
-    degrees: [106.5603, 29.5262]
+    degrees: [106.5576, 29.5261]
   },
   {
     name: '大渡口区',

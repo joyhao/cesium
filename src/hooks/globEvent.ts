@@ -7,10 +7,19 @@ import {
 } from 'cesium';
 
 export function useGlobEvent(viewer: Viewer) {
+  const callback = {
+    cameraChanged: (...arg: any) => {}
+  };
+
   // 开启深度检测
   viewer.scene.globe.depthTestAgainstTerrain = true;
   //定义canvas屏幕点击事件
   var handler = new ScreenSpaceEventHandler(viewer.scene.canvas);
+
+  viewer.camera.changed.addEventListener(() => {
+    const pitch = _Math.toDegrees(viewer.camera.pitch);
+    callback.cameraChanged(pitch);
+  });
 
   function _onClick(event: ScreenSpaceEventHandler.PositionedEvent) {
     //定义一个屏幕点击的事件，pickPosition封装的是获取点击的位置的坐标
@@ -34,5 +43,7 @@ export function useGlobEvent(viewer: Viewer) {
 
   onClick();
 
-  return {};
+  return {
+    callback
+  };
 }

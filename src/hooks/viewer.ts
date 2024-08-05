@@ -8,11 +8,11 @@ import {
   CameraEventType,
   KeyboardEventModifier,
   HeadingPitchRoll,
-  Transforms
+  Transforms,
+  FeatureDetection
 } from 'cesium';
 import { MAP } from './entity.ts';
-export async function useViewer() {
-  const terrainProvider = await createWorldTerrainAsync();
+export function useViewer() {
   function getViewer(ele: string) {
     const viewer = new Viewer(ele, {
       infoBox: false,
@@ -23,30 +23,37 @@ export async function useViewer() {
       sceneModePicker: false,
       navigationHelpButton: false,
       baseLayerPicker: false,
-      fullscreenButton: false,
-      terrainProvider: terrainProvider
+      fullscreenButton: false
       // 地球
       //  globe: false
     });
 
     // 抗锯齿
     // @ts-ignore
-    viewer.scene.fxaa = true;
-    viewer.scene.postProcessStages.fxaa.enabled = false;
+    viewer.scene.fxaa = false;
+    viewer.scene.postProcessStages.fxaa.enabled = true;
     // 水雾特效
     viewer.scene.globe.showGroundAtmosphere = true;
 
-    // 影像图
-    viewer.imageryLayers.addImageryProvider(
-      new UrlTemplateImageryProvider({
-        url: MAP.TDT_IMG_W, //url地址
-        subdomains: MAP.subdomains, //天地图8个服务器
-        tilingScheme: new WebMercatorTilingScheme(),
-        maximumLevel: 18
-      })
-    );
+    // 高德
+    // viewer.imageryLayers.addImageryProvider(
+    //   new UrlTemplateImageryProvider({
+    //     url: 'http://webst02.is.autonavi.com/appmaptile?x={x}&y={y}&z={z}&lang=zh_cn&size=1&scale=1&style=8'
+    //   })
+    // );
 
-    // 影像标注
+    //start 天地图
+    // // 影像图
+    // viewer.imageryLayers.addImageryProvider(
+    //   new UrlTemplateImageryProvider({
+    //     url: MAP.TDT_IMG_W, //url地址
+    //     subdomains: MAP.subdomains, //天地图8个服务器
+    //     tilingScheme: new WebMercatorTilingScheme(),
+    //     maximumLevel: 18
+    //   })
+    // );
+
+    // // 影像标注
     viewer.imageryLayers.addImageryProvider(
       new UrlTemplateImageryProvider({
         url: MAP.TDT_CVA_W, //url地址
@@ -56,15 +63,17 @@ export async function useViewer() {
       })
     );
 
-    // 国界服务
-    viewer.imageryLayers.addImageryProvider(
-      new UrlTemplateImageryProvider({
-        url: MAP.TDT_IBO_W, //url地址
-        subdomains: MAP.subdomains, //天地图8个服务器
-        tilingScheme: new WebMercatorTilingScheme(),
-        maximumLevel: 10
-      })
-    );
+    // // 国界服务
+    // viewer.imageryLayers.addImageryProvider(
+    //   new UrlTemplateImageryProvider({
+    //     url: MAP.TDT_IBO_W, //url地址
+    //     subdomains: MAP.subdomains, //天地图8个服务器
+    //     tilingScheme: new WebMercatorTilingScheme(),
+    //     maximumLevel: 10
+    //   })
+    // );
+
+    //end 天地图
 
     const destination = Cartesian3.fromDegrees(106.56924, 29.5304, 100000);
     const heading = _Math.toRadians(90);
