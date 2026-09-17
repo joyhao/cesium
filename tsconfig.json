@@ -8,11 +8,21 @@
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
     "moduleResolution": "Bundler",
+    "baseUrl": ".",
     "resolveJsonModule": true,
     "isolatedModules": true,
     "noEmit": true,
     "jsx": "preserve",
-    "strict": true
+    "strict": true,
+    "paths": {
+      "@/*": ["src/*"],
+      "@api/*": ["src/api/*"],
+      "@scss/*": ["src/assets/scss/*"],
+      "@com/*": ["src/components/*"],
+      "@utils/*": ["src/utils/*"],
+      "@view/*": ["src/views/*"],
+      "@store/*": ["src/stores/*"]
+    }
   },
   "include": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.vue", "vite.config.ts"]
 }

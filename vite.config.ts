@@ -1,6 +1,7 @@
 import { defineConfig } from "vite";
 import vue from "@vitejs/plugin-vue";
 import AutoImport from "unplugin-auto-import/vite";
+import Components from "unplugin-vue-components/vite";
 import path from "path";
 
 export default defineConfig({
@@ -8,12 +9,18 @@ export default defineConfig({
     port: 8889,
     strictPort: false,
     open: true,
+    hmr: true
   },
   plugins: [
     vue(),
     AutoImport({
       imports: [
         "vue",
+        "vue-router",
+        {
+          // vue-router preset 不含创建路由的 API，手动补充
+          "vue-router": ["createRouter", "createWebHistory", "createWebHashHistory"],
+        },
         {
           // Cesium 常用类自动导入（按需继续补充）
           cesium: [
@@ -23,6 +30,7 @@ export default defineConfig({
             "ImageryLayer",
             "JulianDate",
             "OpenStreetMapImageryProvider",
+            "UrlTemplateImageryProvider",
             "SampledPositionProperty",
             "Viewer",
           ],
@@ -30,15 +38,18 @@ export default defineConfig({
       ],
       dts: "src/auto-imports.d.ts",
     }),
+    // 模板中的组件自动导入（扫描 src/components）
+    Components({ dts: "src/components.d.ts" }),
   ],
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "src"),
-      "@assets": path.resolve(__dirname, "src/assets"),
+      "@asset": path.resolve(__dirname, "src/assets"),
       "@css": path.resolve(__dirname, "src/assets/css"),
       "@img": path.resolve(__dirname, "src/assets/img"),
       "@com": path.resolve(__dirname, "src/components"),
-      "@views": path.resolve(__dirname, "src/views"),
+      "@view": path.resolve(__dirname, "src/views"),
+      "@store": path.resolve(__dirname, "src/stores"),
     },
   },
   optimizeDeps: {
