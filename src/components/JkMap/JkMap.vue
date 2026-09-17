@@ -19,7 +19,7 @@ const cameraInfo = reactive({
 
 onMounted(() => {
   const map = new JkMap(".container");
-  map.on("camera_change", (event) => {
+  map.camera.on("camera_change", (event) => {
     const { height, level } = event.detail;
     cameraInfo.height = height;
     cameraInfo.level = level;

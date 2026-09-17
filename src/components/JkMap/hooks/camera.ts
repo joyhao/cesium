@@ -1,5 +1,6 @@
 import { Viewer } from "cesium";
-import { cEnum } from "../event/event";
+import { cEnum, CEvent } from "../event/event";
+
 import { CameraChangeDetail } from "../type/map.type";
 
 export class JkCamera extends EventTarget {
@@ -40,6 +41,14 @@ export class JkCamera extends EventTarget {
     const level = Math.round(Math.log2(circumference / height));
 
     return Math.min(MAX_LEVEL, Math.max(0, level));
+  }
+
+  on<K extends keyof CEvent>(event: K, listener: (event: CEvent[K]) => void) {
+    this.addEventListener(event, listener as EventListener);
+
+    return () => {
+      this.removeEventListener(event, listener as EventListener);
+    };
   }
 
   destroy() {

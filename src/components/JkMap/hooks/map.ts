@@ -1,5 +1,4 @@
 import { Viewer } from "cesium";
-import { CEvent } from "../event/event";
 import { JkView } from "./view";
 import { query } from "../utils";
 import { JkLayer } from "./layer";
@@ -20,14 +19,6 @@ export class JkMap {
     this.layer = new JkLayer(this.viewer);
     this.fly = new JkFly(this.viewer);
     this.camera = new JkCamera(this.viewer);
-  }
-
-  on<K extends keyof CEvent>(event: K, listener: (event: CEvent[K]) => void) {
-    this.camera.addEventListener(event, listener as EventListener);
-
-    return () => {
-      this.camera.removeEventListener(event, listener as EventListener);
-    };
   }
 
   destroy() {
