@@ -10,6 +10,9 @@ export class JkMap extends JkBase {
   fly: JkFly;
   camera: JkCamera;
   points: JkPoints;
+
+  private visibilityTimer?: ReturnType<typeof setTimeout>;
+
   constructor(selector: string) {
     super(selector);
 
@@ -19,15 +22,31 @@ export class JkMap extends JkBase {
 
     this.points = new JkPoints();
 
-    // 相机变化后延迟同步视口内点位，避免连续拖动时频繁增删 Entity。
+    // 相机变化后延迟同步视口内点位
     this.camera.on("camera_change", () => {
-      this.points.scheduleVisibilityUpdate();
+      this.scheduleVisibilityUpdate();
     });
+  }
+
+  scheduleVisibilityUpdate() {
+    if (this.visibilityTimer) {
+      clearTimeout(this.visibilityTimer);
+    }
+
+    this.visibilityTimer = setTimeout(() => {
+      this.visibilityTimer = undefined;
+      this.points.syncVisiblePoints();
+    }, 300);
   }
 
   destroy() {
     this.points.destroy();
     this.camera.destroy();
     super.destroy();
+
+    if (this.visibilityTimer) {
+      clearTimeout(this.visibilityTimer);
+      this.visibilityTimer = undefined;
+    }
   }
 }
