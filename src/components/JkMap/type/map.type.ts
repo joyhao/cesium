@@ -21,3 +21,7 @@ export interface CameraChangeDetail {
   height: number;
   level: number;
 }
+
+export interface CesiumInfo {
+  fps: number;
+}

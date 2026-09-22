@@ -1,8 +1,8 @@
-import { PointPosition } from "@com/JkMap/type/map.type";
 import { defineStore } from "pinia";
+import type { PointPosition } from "@com/JkMap/type/map.type";
 
-const count = 100;
-const BOUNDS = {
+const POINT_COUNT = 10000;
+const CHINA_BOUNDS = {
   minLongitude: 73.5,
   maxLongitude: 135.1,
   minLatitude: 18.2,
@@ -15,22 +15,29 @@ function randomBetween(min: number, max: number) {
 
 export const usePoints = defineStore("points", () => {
   function createPoint(id: number): PointPosition {
-    const longitude = randomBetween(BOUNDS.minLongitude, BOUNDS.maxLongitude);
-    const latitude = randomBetween(BOUNDS.minLatitude, BOUNDS.maxLatitude);
-
     return {
       id,
-      longitude: Number(longitude.toFixed(6)),
-      latitude: Number(latitude.toFixed(6)),
+      longitude: Number(
+        randomBetween(
+          CHINA_BOUNDS.minLongitude,
+          CHINA_BOUNDS.maxLongitude
+        ).toFixed(6)
+      ),
+      latitude: Number(
+        randomBetween(
+          CHINA_BOUNDS.minLatitude,
+          CHINA_BOUNDS.maxLatitude
+        ).toFixed(6)
+      ),
       height: 0,
     };
   }
 
-  function createPoints(): PointPosition[] {
+  function createPoints(count = POINT_COUNT): PointPosition[] {
     return Array.from({ length: count }, (_, index) => createPoint(index + 1));
   }
 
-  const points = ref(createPoints());
+  const points = ref<PointPosition[]>(createPoints());
 
   return {
     points,

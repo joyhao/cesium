@@ -7,6 +7,6 @@ window.AppConfig = {
   city: {
     longitude: 106.5516,
     latitude: 29.563,
-    height: 180_000,
+    height: 3_000_000,
   },
 };

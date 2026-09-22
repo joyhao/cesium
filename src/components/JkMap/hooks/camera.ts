@@ -2,18 +2,22 @@ import { Viewer } from "cesium";
 import { cEnum, CEvent } from "../event/event";
 
 import { CameraChangeDetail } from "../type/map.type";
+import { JkBase } from "./base";
 
-export class JkCamera extends EventTarget {
+export class JkCamera extends JkBase {
   viewer: Viewer;
   height = 0;
   level = 0;
+  removeCameraChanged?: () => void;
 
-  constructor(viewer: Viewer) {
+  constructor() {
     super();
 
-    this.viewer = viewer;
+    this.viewer = JkBase.viewer;
     this.update();
-    this.viewer.camera.changed.addEventListener(this.update);
+    this.removeCameraChanged = this.viewer.camera.changed.addEventListener(
+      this.update
+    );
   }
 
   private update = () => {
@@ -43,15 +47,8 @@ export class JkCamera extends EventTarget {
     return Math.min(MAX_LEVEL, Math.max(0, level));
   }
 
-  on<K extends keyof CEvent>(event: K, listener: (event: CEvent[K]) => void) {
-    this.addEventListener(event, listener as EventListener);
-
-    return () => {
-      this.removeEventListener(event, listener as EventListener);
-    };
-  }
-
   destroy() {
-    this.viewer.camera.changed.removeEventListener(this.update);
+    this.removeCameraChanged?.();
+    this.removeCameraChanged = undefined;
   }
 }

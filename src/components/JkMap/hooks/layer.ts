@@ -1,11 +1,13 @@
 import { UrlTemplateImageryProvider, Viewer } from "cesium";
+import { JkBase } from "./base";
 
-export class JkLayer {
+export class JkLayer extends JkBase {
   viewer: Viewer;
   AppConfig = inject<AppConfig>("AppConfig") as AppConfig;
 
-  constructor(viewer: Viewer) {
-    this.viewer = viewer;
+  constructor() {
+    super();
+    this.viewer = JkBase.viewer;
     this.init();
   }
 
