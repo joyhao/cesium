@@ -4,6 +4,7 @@ import { cEnum, CEvent } from "../event/event";
 import { CameraChangeDetail } from "../type/map.type";
 import { JkBase } from "./base";
 
+// 监听 Cesium 相机变化，并向上层发布高度和层级信息。
 export class JkCamera extends JkBase {
   viewer: Viewer;
   height = 0;

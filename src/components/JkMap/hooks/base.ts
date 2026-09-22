@@ -5,6 +5,7 @@ import { query } from "../utils";
 import { CesiumInfo } from "../type/map.type";
 
 export class JkBase extends EventTarget {
+  // 当前项目所有地图子模块共享同一个 Cesium Viewer。
   static viewer: Viewer;
   private fpsFrameCount = 0;
   private fpsLastTime = 0;
@@ -20,6 +21,7 @@ export class JkBase extends EventTarget {
     }
   }
 
+  // 使用 Cesium postRender 统计实际完成的场景渲染帧，而不是浏览器刷新帧。
   startFps() {
     if (!JkBase.viewer || this.removePostRender) return;
 
@@ -58,10 +60,11 @@ export class JkBase extends EventTarget {
 
   destroy() {
     if (!JkBase.viewer || JkBase.viewer.isDestroyed()) return;
-    JkBase.viewer.destroy();
     this.stopFps();
+    JkBase.viewer.destroy();
   }
 
+  // 统一封装事件订阅，并通过 CEvent 提供自定义事件名称和载荷类型提示。
   on<K extends keyof CEvent>(event: K, listener: (event: CEvent[K]) => void) {
     this.addEventListener(event, listener as EventListener);
 

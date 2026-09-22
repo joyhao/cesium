@@ -1,6 +1,7 @@
 import { UrlTemplateImageryProvider, Viewer } from "cesium";
 import { JkBase } from "./base";
 
+// 创建并叠加天地图矢量底图和注记图层。
 export class JkLayer extends JkBase {
   viewer: Viewer;
   AppConfig = inject<AppConfig>("AppConfig") as AppConfig;
