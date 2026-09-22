@@ -17,6 +17,10 @@ export class JkMap extends JkBase {
     this.camera = new JkCamera();
 
     this.points = new JkPoints();
+
+    this.camera.on("camera_change", () => {
+      this.points.scheduleVisibilityUpdate();
+    });
   }
 
   destroy() {

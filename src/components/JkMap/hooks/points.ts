@@ -10,13 +10,10 @@ export class JkPoints extends JkBase {
 
   constructor() {
     super();
-    this.add();
-    this.removeCameraListener = this.viewer.camera.changed.addEventListener(
-      this.scheduleVisibilityUpdate
-    );
+    this.init();
   }
 
-  add() {
+  init() {
     const { points } = usePoints();
 
     if (!this.viewer || this.viewer.isDestroyed()) return;
@@ -43,11 +40,11 @@ export class JkPoints extends JkBase {
 
       return id;
     });
-
-    this.scheduleVisibilityUpdate();
   }
 
-  private scheduleVisibilityUpdate = () => {
+  scheduleVisibilityUpdate = () => {
+    console.log("----");
+
     if (this.visibilityTimer) {
       clearTimeout(this.visibilityTimer);
     }
