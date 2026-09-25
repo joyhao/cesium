@@ -28,8 +28,10 @@ let map: JkMap;
 
 onMounted(() => {
   map = new JkMap(".container");
+
   map.camera.on("camera_change", (event) => {
     const { height, level } = event.detail;
+
     info.height = height;
     info.level = level;
   });

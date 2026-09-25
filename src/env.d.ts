@@ -1,5 +1,10 @@
 /// <reference types="vite/client" />
 
+declare module "*.glsl" {
+  const value: string;
+  export default value;
+}
+
 interface AppConfig {
   token: string;
   vector: string;

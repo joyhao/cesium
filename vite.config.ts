@@ -1,5 +1,6 @@
 import { defineConfig } from "vite";
 import vue from "@vitejs/plugin-vue";
+import glsl from "vite-plugin-glsl";
 import AutoImport from "unplugin-auto-import/vite";
 import Components from "unplugin-vue-components/vite";
 import path from "path";
@@ -9,17 +10,22 @@ export default defineConfig({
     port: 8889,
     strictPort: false,
     open: true,
-    hmr: true
+    hmr: true,
   },
   plugins: [
     vue(),
+    glsl(),
     AutoImport({
       imports: [
         "vue",
         "vue-router",
         {
           // vue-router preset 不含创建路由的 API，手动补充
-          "vue-router": ["createRouter", "createWebHistory", "createWebHashHistory"],
+          "vue-router": [
+            "createRouter",
+            "createWebHistory",
+            "createWebHashHistory",
+          ],
         },
         {
           // Cesium 常用类自动导入（按需继续补充）

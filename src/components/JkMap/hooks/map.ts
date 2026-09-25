@@ -24,19 +24,8 @@ export class JkMap extends JkBase {
 
     // 相机变化后延迟同步视口内点位
     this.camera.on("camera_change", () => {
-      this.scheduleVisibilityUpdate();
+      this.points.scheduleVisibilityUpdate();
     });
-  }
-
-  scheduleVisibilityUpdate() {
-    if (this.visibilityTimer) {
-      clearTimeout(this.visibilityTimer);
-    }
-
-    this.visibilityTimer = setTimeout(() => {
-      this.visibilityTimer = undefined;
-      this.points.syncVisiblePoints();
-    }, 300);
   }
 
   destroy() {
