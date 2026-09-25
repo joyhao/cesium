@@ -26,8 +26,8 @@ type WorkerResult = { type: "result"; positions: Float64Array; ids: number[] };
 const DEFAULT_COLOR: [number, number, number, number] = [0, 0.85, 1, 1];
 const SELECTED_COLOR: [number, number, number, number] = [1, 0.4, 0.1, 1];
 const HOVER_COLOR: [number, number, number, number] = [1, 1, 0.4, 1];
-// 点击命中容差（像素），pointSize 为 8，取 10 较宽松。
-const CLICK_THRESHOLD = 10;
+// 点击命中容差（像素），pointSize 为 16，取 18 较宽松。
+const CLICK_THRESHOLD = 18;
 // 鼠标移动拾取节流（毫秒），避免高频 mousemove 造成卡顿。
 const HOVER_THROTTLE = 30;
 
@@ -227,26 +227,28 @@ export class JkPoints extends JkBase {
     // 视口内点位集合未变化时不重建 Primitive，避免无谓开销。
     if (!force && this.sameVisibleSet(nextIds)) return;
 
+    const nextAppearance = new Appearance({
+      vertexShaderSource: circleVertShader,
+      fragmentShaderSource: circleFragShader,
+      // 半透明
+      translucent: true,
+      closed: false,
+      renderState: {
+        // 绘制时写入深度缓冲 让点之间能正确互相遮挡
+        depthMask: true,
+        // 启深度测试
+        depthTest: {
+          enabled: true,
+        },
+      },
+    });
+
     const nextPrimitive = positions.length
       ? new Primitive({
           geometryInstances: new GeometryInstance({
             geometry: this.createGeometryFromPositions(positions, ids),
           }),
-          appearance: new Appearance({
-            vertexShaderSource: circleVertShader,
-            fragmentShaderSource: circleFragShader,
-            // 半透明
-            translucent: true,
-            closed: false,
-            renderState: {
-              // 绘制时写入深度缓冲 让点之间能正确互相遮挡
-              depthMask: true,
-              // 启深度测试
-              depthTest: {
-                enabled: true,
-              },
-            },
-          }),
+          appearance: nextAppearance,
           // 自定义 Geometry 没有对应 worker，无法异步加载，必须同步创建。
           // 坐标已由 Worker 算好，这里只做轻量包装，同步开销很小。
           asynchronous: false,
