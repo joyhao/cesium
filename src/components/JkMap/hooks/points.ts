@@ -61,7 +61,10 @@ export class JkPoints extends JkBase {
 
     // 点击拾取：命中点位则切换其选中态并重新着色。
     this.handler = new ScreenSpaceEventHandler(this.viewer.scene.canvas);
-    this.handler.setInputAction(this.onLeftClick, ScreenSpaceEventType.LEFT_CLICK);
+    this.handler.setInputAction(
+      this.onLeftClick,
+      ScreenSpaceEventType.LEFT_CLICK
+    );
 
     this.syncVisiblePoints();
   }
@@ -149,7 +152,11 @@ export class JkPoints extends JkBase {
   }
 
   /** 用 Worker 回传的坐标数组批量构建一个 Primitive。 */
-  private replacePrimitive(positions: Float64Array, ids: number[], force = false) {
+  private replacePrimitive(
+    positions: Float64Array,
+    ids: number[],
+    force = false
+  ) {
     if (!this.viewer || this.viewer.isDestroyed()) return;
 
     const nextIds = new Set(ids);
@@ -235,7 +242,9 @@ export class JkPoints extends JkBase {
     const colors = new Float32Array(count * 4);
 
     for (let i = 0; i < count; i++) {
-      const color = this.selectedIds.has(ids[i]) ? SELECTED_COLOR : DEFAULT_COLOR;
+      const color = this.selectedIds.has(ids[i])
+        ? SELECTED_COLOR
+        : DEFAULT_COLOR;
       colors[i * 4] = color[0];
       colors[i * 4 + 1] = color[1];
       colors[i * 4 + 2] = color[2];
@@ -248,12 +257,12 @@ export class JkPoints extends JkBase {
       componentsPerAttribute: 3,
       values: positions,
     });
-    (attributes as unknown as Record<string, GeometryAttribute>).aColor =
-      new GeometryAttribute({
-        componentDatatype: ComponentDatatype.FLOAT,
-        componentsPerAttribute: 4,
-        values: colors,
-      });
+    // @ts-ignore
+    attributes.aColor = new GeometryAttribute({
+      componentDatatype: ComponentDatatype.FLOAT,
+      componentsPerAttribute: 4,
+      values: colors,
+    });
 
     return new Geometry({
       attributes,
