@@ -13,14 +13,13 @@ import {
   ScreenSpaceEventHandler,
   ScreenSpaceEventType,
 } from "cesium";
-import { usePoints } from "@store/points";
+import { usePoints, POINT_COUNT } from "@store/points";
 import { cEnum } from "../event/event";
 import type { PointPosition } from "../type/map.type";
 import { JkBase } from "./base";
 
 import circleVertShader from "@com/JkMap/shader/circle.vert.glsl";
 import circleFragShader from "@com/JkMap/shader/circle.frag.glsl";
-import { sleep } from "../utils";
 
 type WorkerResult = { type: "result"; positions: Float64Array; ids: number[] };
 
@@ -35,7 +34,9 @@ const HOVER_THROTTLE = 30;
 export class JkPoints extends JkBase {
   viewer = JkBase.viewer;
   uPoint = usePoints();
-  points = this.uPoint.createPoints();
+  // 点位分帧生成，初始为空，随帧累积；totalCount 记录目标总数用于统计。
+  points: PointPosition[] = [];
+  private totalCount = 0;
 
   // 当前视口筛选出的点位，统计值以视口筛选结果为准。
   private visibleIds = new Set<number>();
@@ -63,8 +64,8 @@ export class JkPoints extends JkBase {
       { type: "module" }
     );
     this.worker.onmessage = this.onWorkerMessage;
-    // 分批次增量下发点位，避免一次性传输全量数据阻塞主线程。
-    this.postPointsInBatches(this.points);
+    // 分帧生成点位并增量下发，避免一次性生成 + 传输全量数据阻塞主线程。
+    this.generatePointsInFrames(POINT_COUNT);
 
     // 点击拾取：命中点位则切换其选中态并重新着色。
     this.handler = new ScreenSpaceEventHandler(this.viewer.scene.canvas);
@@ -77,9 +78,6 @@ export class JkPoints extends JkBase {
       this.onMouseMove,
       ScreenSpaceEventType.MOUSE_MOVE
     );
-
-    // 分批次异步下发点位（每批下发后立即刷新视口，渐进显示）。
-    this.postPointsInBatches(this.points);
   }
 
   private onWorkerMessage = (event: MessageEvent<WorkerResult>) => {
@@ -168,15 +166,29 @@ export class JkPoints extends JkBase {
   };
 
   /**
-   * 把全量点位切成小批，逐批发给 Worker 追加。
-   * 每批发完立即刷新视口（渐进显示），批间用 sleep 让出主线程，避免一次性大消息阻塞。
+   * 分帧生成点位：每帧只生成一小批（默认 1 万），立即发给 Worker 并刷新视口，
+   * 帧间让出主线程，避免一次性循环 30 万点阻塞渲染。
    */
-  private async postPointsInBatches(all: PointPosition[], chunkSize = 10_000) {
-    for (let i = 0; i < all.length; i += chunkSize) {
-      this.worker.postMessage({ type: "add", points: all.slice(i, i + chunkSize) });
+  private generatePointsInFrames(total: number, chunkSize = 10_000) {
+    this.totalCount = total;
+    let generated = 0;
+
+    const step = () => {
+      if (!this.viewer || this.viewer.isDestroyed()) return;
+
+      const end = Math.min(generated + chunkSize, total);
+      const chunk = this.uPoint.createPoints(end - generated, generated);
+      this.points.push(...chunk);
+      this.worker.postMessage({ type: "add", points: chunk });
       this.syncVisiblePoints();
-      await sleep(1000);
-    }
+
+      generated = end;
+      if (generated < total) {
+        requestAnimationFrame(step);
+      }
+    };
+
+    requestAnimationFrame(step);
   }
 
   /** 计算视口矩形，交给 Worker 筛选点位并返回坐标数组。 */
@@ -328,7 +340,7 @@ export class JkPoints extends JkBase {
       new CustomEvent(cEnum.points_change, {
         detail: {
           loaded: this.visibleCount,
-          total: this.points.length,
+          total: this.totalCount,
         },
       })
     );
