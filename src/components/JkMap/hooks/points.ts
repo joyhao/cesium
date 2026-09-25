@@ -25,8 +25,11 @@ type WorkerResult = { type: "result"; positions: Float64Array; ids: number[] };
 
 const DEFAULT_COLOR: [number, number, number, number] = [0, 0.85, 1, 1];
 const SELECTED_COLOR: [number, number, number, number] = [1, 0.4, 0.1, 1];
+const HOVER_COLOR: [number, number, number, number] = [1, 1, 0.4, 1];
 // 点击命中容差（像素），pointSize 为 8，取 10 较宽松。
 const CLICK_THRESHOLD = 10;
+// 鼠标移动拾取节流（毫秒），避免高频 mousemove 造成卡顿。
+const HOVER_THROTTLE = 30;
 
 export class JkPoints extends JkBase {
   viewer = JkBase.viewer;
@@ -45,8 +48,11 @@ export class JkPoints extends JkBase {
   private visibleIdsList: number[] = [];
   // 被点击选中的点位 id 集合（再次点击取消）。
   private selectedIds = new Set<number>();
+  // 当前鼠标悬停的点位 id（同一时刻最多一个，移开则为 undefined）。
+  private hoverId: number | undefined = undefined;
 
   private handler: ScreenSpaceEventHandler;
+  private hoverTimer?: ReturnType<typeof setTimeout>;
 
   constructor() {
     super();
@@ -64,6 +70,11 @@ export class JkPoints extends JkBase {
     this.handler.setInputAction(
       this.onLeftClick,
       ScreenSpaceEventType.LEFT_CLICK
+    );
+    // 悬停拾取：鼠标移到点位上即切换其悬停态并重新着色。
+    this.handler.setInputAction(
+      this.onMouseMove,
+      ScreenSpaceEventType.MOUSE_MOVE
     );
 
     this.syncVisiblePoints();
@@ -87,6 +98,32 @@ export class JkPoints extends JkBase {
       this.replacePrimitive(this.visiblePositions, this.visibleIdsList, true);
     }
   };
+
+  private onMouseMove = (
+    movement: { startPosition: Cartesian2; endPosition: Cartesian2 }
+  ) => {
+    // 节流：一个周期内只处理一次，避免高频 mousemove 卡顿。
+    if (this.hoverTimer) return;
+    const endPosition = movement.endPosition;
+    this.hoverTimer = setTimeout(() => {
+      this.hoverTimer = undefined;
+      this.applyHover(endPosition);
+    }, HOVER_THROTTLE);
+  };
+
+  /** 拾取鼠标下的点位并更新 hover 状态，命中变化才重绘。 */
+  private applyHover(position: Cartesian2) {
+    const id = this.pickPoint(position);
+    if (id === this.hoverId) return;
+    this.hoverId = id;
+    // 悬停在点位上显示手型光标，提示可点击；移开恢复默认。
+    if (this.viewer) {
+      this.viewer.scene.canvas.style.cursor = id !== undefined ? "pointer" : "default";
+    }
+    if (this.visiblePositions) {
+      this.replacePrimitive(this.visiblePositions, this.visibleIdsList, true);
+    }
+  }
 
   /** 把屏幕坐标反投影到可见点位，返回容差内最近的那个点 id。 */
   private pickPoint(position: Cartesian2): number | undefined {
@@ -242,9 +279,10 @@ export class JkPoints extends JkBase {
     const colors = new Float32Array(count * 4);
 
     for (let i = 0; i < count; i++) {
-      const color = this.selectedIds.has(ids[i])
-        ? SELECTED_COLOR
-        : DEFAULT_COLOR;
+      let color: [number, number, number, number];
+      if (this.selectedIds.has(ids[i])) color = SELECTED_COLOR;
+      else if (this.hoverId === ids[i]) color = HOVER_COLOR;
+      else color = DEFAULT_COLOR;
       colors[i * 4] = color[0];
       colors[i * 4 + 1] = color[1];
       colors[i * 4 + 2] = color[2];
@@ -290,6 +328,8 @@ export class JkPoints extends JkBase {
     this.visibleCount = 0;
     this.visiblePositions = undefined;
     this.visibleIdsList = [];
+    this.hoverId = undefined;
+    if (this.viewer) this.viewer.scene.canvas.style.cursor = "default";
     this.emitChange();
   }
 
@@ -297,6 +337,10 @@ export class JkPoints extends JkBase {
     if (this.visibilityTimer) {
       clearTimeout(this.visibilityTimer);
       this.visibilityTimer = undefined;
+    }
+    if (this.hoverTimer) {
+      clearTimeout(this.hoverTimer);
+      this.hoverTimer = undefined;
     }
 
     this.handler.destroy();
