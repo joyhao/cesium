@@ -4,11 +4,12 @@ import type { PointPosition } from "../type/map.type";
 
 type RectLike = { west: number; east: number; south: number; north: number };
 
-type InitMessage = { type: "init"; points: PointPosition[] };
+// 主线程分批次追加点位，避免一次性传输全量数据。
+type AddMessage = { type: "add"; points: PointPosition[] };
 type FilterMessage = { type: "filter"; rectangle: RectLike };
-type InMessage = InitMessage | FilterMessage;
+type InMessage = AddMessage | FilterMessage;
 
-// Worker 内只持有一次下发的全量点位，后续仅按视口矩形筛选。
+// Worker 内累积主线程分批下发的点位，后续仅按视口矩形筛选。
 let points: PointPosition[] = [];
 
 const ctx = self as unknown as {
@@ -19,8 +20,8 @@ const ctx = self as unknown as {
 ctx.onmessage = (event: MessageEvent<InMessage>) => {
   const message = event.data;
 
-  if (message.type === "init") {
-    points = message.points;
+  if (message.type === "add") {
+    points.push(...message.points);
     return;
   }
 

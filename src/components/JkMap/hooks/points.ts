@@ -20,6 +20,7 @@ import { JkBase } from "./base";
 
 import circleVertShader from "@com/JkMap/shader/circle.vert.glsl";
 import circleFragShader from "@com/JkMap/shader/circle.frag.glsl";
+import { sleep } from "../utils";
 
 type WorkerResult = { type: "result"; positions: Float64Array; ids: number[] };
 
@@ -62,8 +63,8 @@ export class JkPoints extends JkBase {
       { type: "module" }
     );
     this.worker.onmessage = this.onWorkerMessage;
-    // 全量点位只下发一次，后续只传视口矩形。
-    this.worker.postMessage({ type: "init", points: this.points });
+    // 分批次增量下发点位，避免一次性传输全量数据阻塞主线程。
+    this.postPointsInBatches(this.points);
 
     // 点击拾取：命中点位则切换其选中态并重新着色。
     this.handler = new ScreenSpaceEventHandler(this.viewer.scene.canvas);
@@ -77,7 +78,8 @@ export class JkPoints extends JkBase {
       ScreenSpaceEventType.MOUSE_MOVE
     );
 
-    this.syncVisiblePoints();
+    // 分批次异步下发点位（每批下发后立即刷新视口，渐进显示）。
+    this.postPointsInBatches(this.points);
   }
 
   private onWorkerMessage = (event: MessageEvent<WorkerResult>) => {
@@ -164,6 +166,18 @@ export class JkPoints extends JkBase {
       this.syncVisiblePoints();
     }, 300);
   };
+
+  /**
+   * 把全量点位切成小批，逐批发给 Worker 追加。
+   * 每批发完立即刷新视口（渐进显示），批间用 sleep 让出主线程，避免一次性大消息阻塞。
+   */
+  private async postPointsInBatches(all: PointPosition[], chunkSize = 10_000) {
+    for (let i = 0; i < all.length; i += chunkSize) {
+      this.worker.postMessage({ type: "add", points: all.slice(i, i + chunkSize) });
+      this.syncVisiblePoints();
+      await sleep(1000);
+    }
+  }
 
   /** 计算视口矩形，交给 Worker 筛选点位并返回坐标数组。 */
   syncVisiblePoints() {

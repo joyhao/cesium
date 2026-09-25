@@ -9,6 +9,11 @@ export function randomBetween(min: number, max: number) {
   return min + Math.random() * (max - min);
 }
 
+/** 返回一个在 ms 毫秒后 resolve 的 Promise，用于 await 让出主线程/延时。 */
+export function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 /**
  * 判断点位是否位于当前相机可视矩形内，兼容跨越 ±180° 经线的情况。
  * @param point 点位
