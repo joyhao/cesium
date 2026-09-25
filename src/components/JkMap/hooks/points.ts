@@ -1,8 +1,6 @@
 import {
   Appearance,
   BoundingSphere,
-  Cartesian3,
-  Cartographic,
   ComponentDatatype,
   Geometry,
   GeometryAttribute,
@@ -10,7 +8,6 @@ import {
   GeometryInstance,
   Primitive,
   PrimitiveType,
-  Rectangle,
 } from "cesium";
 import { usePoints } from "@store/points";
 import { cEnum } from "../event/event";
@@ -19,7 +16,8 @@ import { JkBase } from "./base";
 
 import circleVertShader from "@com/JkMap/shader/circle.vert.glsl";
 import circleFragShader from "@com/JkMap/shader/circle.frag.glsl";
-import { isPointInRectangle } from "../utils";
+
+type WorkerResult = { type: "result"; positions: Float64Array; ids: number[] };
 
 export class JkPoints extends JkBase {
   viewer = JkBase.viewer;
@@ -31,11 +29,26 @@ export class JkPoints extends JkBase {
   private visibleCount = 0;
   private visiblePrimitive?: Primitive;
   private visibilityTimer?: ReturnType<typeof setTimeout>;
+  private worker: Worker;
 
   constructor() {
     super();
+    // 点位筛选放到 Worker 执行，主线程只负责建 Primitive。
+    this.worker = new Worker(
+      new URL("../worker/points.worker.ts", import.meta.url),
+      { type: "module" }
+    );
+    this.worker.onmessage = this.onWorkerMessage;
+    // 全量点位只下发一次，后续只传视口矩形。
+    this.worker.postMessage({ type: "init", points: this.points });
     this.syncVisiblePoints();
   }
+
+  private onWorkerMessage = (event: MessageEvent<WorkerResult>) => {
+    const data = event.data;
+    if (data.type !== "result") return;
+    this.replacePrimitive(data.positions, data.ids);
+  };
 
   scheduleVisibilityUpdate = () => {
     if (this.visibilityTimer) {
@@ -48,61 +61,66 @@ export class JkPoints extends JkBase {
     }, 300);
   };
 
-  /** 计算视口内点位，并用一个 Primitive 批量替换上一帧点位。 */
+  /** 计算视口矩形，交给 Worker 筛选点位并返回坐标数组。 */
   syncVisiblePoints() {
     if (!this.viewer || this.viewer.isDestroyed()) return;
 
-    // 相机可视区域
     const rectangle = this.viewer.camera.computeViewRectangle(this.ellipsoid);
 
-    // 相机正在初始化或视角朝向太空时没有有效视口，此时不应把全部点误认为可见。
+    // 相机正在初始化或视角朝向太空时没有有效视口，直接清空。
     if (!rectangle) {
-      this.replacePrimitive([]);
+      this.replacePrimitive(new Float64Array(0), []);
       return;
     }
 
-    // 可视区域的点位
-    const visiblePoints = this.points.filter((point) =>
-      isPointInRectangle(point, rectangle)
-    );
-
-    // 新点位
-    this.replacePrimitive(visiblePoints);
+    this.worker.postMessage({
+      type: "filter",
+      rectangle: {
+        west: rectangle.west,
+        east: rectangle.east,
+        south: rectangle.south,
+        north: rectangle.north,
+      },
+    });
   }
 
-  /**
-   * 批量构建一个 Primitive
-   * @param points
-   * @returns
-   */
-  private replacePrimitive(points: PointPosition[]) {
-    const nextIds = new Set(points.map((point) => point.id));
+  /** 用 Worker 回传的坐标数组批量构建一个 Primitive。 */
+  private replacePrimitive(positions: Float64Array, ids: number[]) {
+    if (!this.viewer || this.viewer.isDestroyed()) return;
+
+    const nextIds = new Set(ids);
 
     // 视口内点位集合未变化时不重建 Primitive，避免无谓开销。
     if (this.sameVisibleSet(nextIds)) return;
 
-    const nextPrimitive = new Primitive({
-      geometryInstances: new GeometryInstance({
-        geometry: this.createPointGeometry(points),
-      }),
-      appearance: new Appearance({
-        vertexShaderSource: circleVertShader,
-        fragmentShaderSource: circleFragShader,
-        translucent: true,
-        closed: false,
-        renderState: {
-          depthMask: true,
-          depthTest: {
-            enabled: true,
-          },
-        },
-      }),
-      // 自定义 Geometry 没有对应 worker，无法异步加载，必须同步创建。
-      // 视口点位已批量进单个轻量 POINTS 几何体，同步开销很小。
-      asynchronous: false,
-      allowPicking: false,
-      releaseGeometryInstances: true,
-    });
+    const nextPrimitive = positions.length
+      ? new Primitive({
+          geometryInstances: new GeometryInstance({
+            geometry: this.createGeometryFromPositions(positions),
+          }),
+          appearance: new Appearance({
+            vertexShaderSource: circleVertShader,
+            fragmentShaderSource: circleFragShader,
+            // 半透明
+            translucent: true,
+            closed: false,
+            renderState: {
+              // 绘制时写入深度缓冲 让点之间能正确互相遮挡
+              depthMask: true,
+              // 启深度测试
+              depthTest: {
+                enabled: true,
+              },
+            },
+          }),
+          // 自定义 Geometry 没有对应 worker，无法异步加载，必须同步创建。
+          // 坐标已由 Worker 算好，这里只做轻量包装，同步开销很小。
+          asynchronous: false,
+          allowPicking: false,
+          // 几何体创建完成后，释放 geometryInstances 数组的引用。
+          releaseGeometryInstances: true,
+        })
+      : undefined;
 
     if (nextPrimitive) {
       this.viewer.scene.primitives.add(nextPrimitive);
@@ -112,7 +130,7 @@ export class JkPoints extends JkBase {
 
     this.visiblePrimitive = nextPrimitive;
     this.visibleIds = nextIds;
-    this.visibleCount = points.length;
+    this.visibleCount = positions.length / 3;
     this.emitChange();
   }
 
@@ -127,7 +145,7 @@ export class JkPoints extends JkBase {
     return sameSize && allContained;
   }
 
-  /** 移除并销毁上一个 Primitive；异步加载中的 Primitive 销毁可能抛错，忽略即可。 */
+  /** 移除并销毁上一个 Primitive；销毁中抛错忽略即可。 */
   private removeVisiblePrimitive() {
     const prev = this.visiblePrimitive;
     if (!prev || !this.viewer || this.viewer.isDestroyed()) return;
@@ -137,38 +155,27 @@ export class JkPoints extends JkBase {
       this.viewer.scene.primitives.remove(prev);
       if (!prev.isDestroyed()) prev.destroy();
     } catch {
-      // 仍在异步创建的 Primitive 被提前销毁时忽略异常。
+      // 仍在销毁流程中的 Primitive 忽略异常。
     }
   }
 
   /**
-   * 所有点位写入同一个 Geometry，使用 PrimitiveType.POINTS 让 GPU 以
+   * 所有点位的 xyz 写入同一个 Geometry，使用 PrimitiveType.POINTS 让 GPU 以
    * gl_PointSize 渲染圆点。相比为每个点生成球体顶点的 EllipsoidGeometry，
    * 这种方式只有一个几何体、一次 draw call，渲染 1 万点也很轻量。
    */
-  private createPointGeometry(points: PointPosition[]) {
-    const positions = points.map((point) =>
-      Cartesian3.fromDegrees(point.longitude, point.latitude, point.height)
-    );
-    const positionValues = new Float64Array(positions.length * 3);
-
-    positions.forEach((position, index) => {
-      positionValues[index * 3] = position.x;
-      positionValues[index * 3 + 1] = position.y;
-      positionValues[index * 3 + 2] = position.z;
-    });
-
+  private createGeometryFromPositions(positions: Float64Array) {
     const attributes = new GeometryAttributes();
     attributes.position = new GeometryAttribute({
       componentDatatype: ComponentDatatype.DOUBLE,
       componentsPerAttribute: 3,
-      values: positionValues,
+      values: positions,
     });
 
     return new Geometry({
       attributes,
       primitiveType: PrimitiveType.POINTS,
-      boundingSphere: BoundingSphere.fromPoints(positions),
+      boundingSphere: BoundingSphere.fromVertices(positions),
     });
   }
 
@@ -198,6 +205,7 @@ export class JkPoints extends JkBase {
       this.visibilityTimer = undefined;
     }
 
+    this.worker.terminate();
     this.clear();
   }
 }

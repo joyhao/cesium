@@ -1,4 +1,4 @@
-import { Rectangle, Cartographic } from "cesium";
+import { Rectangle, Cartographic } from "@cesium/engine";
 import { PointPosition } from "./type/map.type";
 
 export function query(selector: string) {
