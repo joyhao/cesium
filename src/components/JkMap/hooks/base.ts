@@ -7,6 +7,8 @@ import { CesiumInfo } from "../type/map.type";
 export class JkBase extends EventTarget {
   // 当前项目所有地图子模块共享同一个 Cesium Viewer。
   static viewer: Viewer;
+  // 地球椭球体（Ellipsoid）对象   WGS84
+  ellipsoid;
   private fpsFrameCount = 0;
   private fpsLastTime = 0;
   private removePostRender?: () => void;
@@ -17,6 +19,7 @@ export class JkBase extends EventTarget {
     if (selector) {
       this.container = query(selector);
       JkBase.viewer = new Viewer(this.container, viewerOptions);
+      this.ellipsoid = JkBase.viewer.scene.globe.ellipsoid;
       this.startFps();
     }
   }
