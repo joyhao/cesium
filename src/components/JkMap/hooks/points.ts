@@ -10,26 +10,16 @@ import {
   GeometryInstance,
   Primitive,
   PrimitiveType,
-  ScreenSpaceEventHandler,
-  ScreenSpaceEventType,
 } from "cesium";
 import { usePoints, POINT_COUNT } from "@store/points";
 import { cEnum } from "../event/event";
-import type { PointPosition } from "../type/map.type";
+import type {  PointPosition, WorkerResult } from "../type/map.type";
 import { JkBase } from "./base";
 
 import circleVertShader from "@com/JkMap/shader/circle.vert.glsl";
 import circleFragShader from "@com/JkMap/shader/circle.frag.glsl";
+import { CLICK_THRESHOLD, JkColor } from "../entity/entity";
 
-type WorkerResult = { type: "result"; positions: Float64Array; ids: number[] };
-
-const DEFAULT_COLOR: [number, number, number, number] = [0, 0.85, 1, 1];
-const SELECTED_COLOR: [number, number, number, number] = [1, 0.4, 0.1, 1];
-const HOVER_COLOR: [number, number, number, number] = [1, 1, 0.4, 1];
-// 点击命中容差（像素），pointSize 为 16，取 18 较宽松。
-const CLICK_THRESHOLD = 18;
-// 鼠标移动拾取节流（毫秒），避免高频 mousemove 造成卡顿。
-const HOVER_THROTTLE = 30;
 
 export class JkPoints extends JkBase {
   viewer = JkBase.viewer;
@@ -53,7 +43,6 @@ export class JkPoints extends JkBase {
   // 当前鼠标悬停的点位 id（同一时刻最多一个，移开则为 undefined）。
   private hoverId: number | undefined = undefined;
 
-  private handler: ScreenSpaceEventHandler;
   private hoverTimer?: ReturnType<typeof setTimeout>;
 
   constructor() {
@@ -67,27 +56,23 @@ export class JkPoints extends JkBase {
     // 分帧生成点位并增量下发，避免一次性生成 + 传输全量数据阻塞主线程。
     this.generatePointsInFrames(POINT_COUNT);
 
-    // 点击拾取：命中点位则切换其选中态并重新着色。
-    this.handler = new ScreenSpaceEventHandler(this.viewer.scene.canvas);
-    this.handler.setInputAction(
-      this.onLeftClick,
-      ScreenSpaceEventType.LEFT_CLICK
-    );
-    // 悬停拾取：鼠标移到点位上即切换其悬停态并重新着色。
-    this.handler.setInputAction(
-      this.onMouseMove,
-      ScreenSpaceEventType.MOUSE_MOVE
-    );
-  }
+  
 
-  private onWorkerMessage = (event: MessageEvent<WorkerResult>) => {
-    const data = event.data;
-    if (data.type !== "result") return;
-    this.replacePrimitive(data.positions, data.ids);
-  };
+    // 绑定事件
+    this.on("on_left_click",event=>{
+      const {position} = event.detail
+     this.onLeftClick(position)
+    })
 
-  private onLeftClick = (movement: { position: Cartesian2 }) => {
-    const id = this.pickPoint(movement.position);
+    this.on("on_move_click",event=>{
+      const {startPosition,endPosition} = event.detail
+      this.onMoveClick(startPosition,endPosition)
+    })
+  } 
+
+  onLeftClick(position:Cartesian2){
+    
+    const id = this.pickPoint(position);
     if (id === undefined) return;
 
     if (this.selectedIds.has(id)) this.selectedIds.delete(id);
@@ -97,19 +82,23 @@ export class JkPoints extends JkBase {
     if (this.visiblePositions) {
       this.replacePrimitive(this.visiblePositions, this.visibleIdsList, true);
     }
-  };
+  }
 
-  private onMouseMove = (
-    movement: { startPosition: Cartesian2; endPosition: Cartesian2 }
-  ) => {
-    // 节流：一个周期内只处理一次，避免高频 mousemove 卡顿。
+  onMoveClick(startPosition:Cartesian2,endPosition:Cartesian2){
+     // 节流：一个周期内只处理一次，避免高频 mousemove 卡顿。
     if (this.hoverTimer) return;
-    const endPosition = movement.endPosition;
     this.hoverTimer = setTimeout(() => {
       this.hoverTimer = undefined;
       this.applyHover(endPosition);
-    }, HOVER_THROTTLE);
+    }, 30);
+  }
+
+  private onWorkerMessage = (event: MessageEvent<WorkerResult>) => {
+    const data = event.data;
+    if (data.type !== "result") return;
+    this.replacePrimitive(data.positions, data.ids);
   };
+
 
   /** 拾取鼠标下的点位并更新 hover 状态，命中变化才重绘。 */
   private applyHover(position: Cartesian2) {
@@ -129,7 +118,7 @@ export class JkPoints extends JkBase {
   private pickPoint(position: Cartesian2): number | undefined {
     if (!this.viewer || !this.visiblePositions) return undefined;
 
-    const scene = this.viewer.scene;
+    const scene = JkBase.viewer.scene;
     let bestId: number | undefined;
     let bestDist = CLICK_THRESHOLD;
 
@@ -194,8 +183,9 @@ export class JkPoints extends JkBase {
   /** 计算视口矩形，交给 Worker 筛选点位并返回坐标数组。 */
   syncVisiblePoints() {
     if (!this.viewer || this.viewer.isDestroyed()) return;
-
-    const rectangle = this.viewer.camera.computeViewRectangle(this.ellipsoid);
+    
+    //  地球椭球体（Ellipsoid）对象   WGS84
+    const rectangle = this.viewer.camera.computeViewRectangle(this.viewer.scene.globe.ellipsoid);
 
     // 相机正在初始化或视角朝向太空时没有有效视口，直接清空。
     if (!rectangle) {
@@ -307,10 +297,10 @@ export class JkPoints extends JkBase {
     const colors = new Float32Array(count * 4);
 
     for (let i = 0; i < count; i++) {
-      let color: [number, number, number, number];
-      if (this.selectedIds.has(ids[i])) color = SELECTED_COLOR;
-      else if (this.hoverId === ids[i]) color = HOVER_COLOR;
-      else color = DEFAULT_COLOR;
+      let color=[]
+      if (this.selectedIds.has(ids[i])) color = JkColor.SELECTED_COLOR;
+      else if (this.hoverId === ids[i]) color = JkColor.HOVER_COLOR;
+      else color = JkColor.DEFAULT_COLOR;
       colors[i * 4] = color[0];
       colors[i * 4 + 1] = color[1];
       colors[i * 4 + 2] = color[2];
@@ -338,14 +328,10 @@ export class JkPoints extends JkBase {
   }
 
   private emitChange() {
-    this.dispatchEvent(
-      new CustomEvent(cEnum.points_change, {
-        detail: {
-          loaded: this.visibleCount,
-          total: this.totalCount,
-        },
-      })
-    );
+    this.emit(cEnum.points_change, {
+      loaded: this.visibleCount,
+      total: this.totalCount,
+    });
   }
 
   clear() {
@@ -371,7 +357,6 @@ export class JkPoints extends JkBase {
       this.hoverTimer = undefined;
     }
 
-    this.handler.destroy();
     this.worker.terminate();
     this.clear();
   }

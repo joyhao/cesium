@@ -1,28 +1,64 @@
 import { cEnum, CEvent } from "../event/event";
-import { Viewer } from "cesium";
+import {
+  ScreenSpaceEventHandler,
+  ScreenSpaceEventType,
+  Viewer,
+} from "cesium";
 import { viewerOptions } from "../entity/entity";
 import { query } from "../utils";
-import { CesiumInfo } from "../type/map.type";
+import {  DetailOf,  MovePosition, Position } from "../type/map.type";
 
-export class JkBase extends EventTarget {
+
+export class JkBase  {
   // 当前项目所有地图子模块共享同一个 Cesium Viewer。
   static viewer: Viewer;
-  // 地球椭球体（Ellipsoid）对象   WGS84
-  ellipsoid;
+  private static bus = new EventTarget();
   private fpsFrameCount = 0;
   private fpsLastTime = 0;
   private removePostRender?: () => void;
   container: HTMLElement | undefined;
+  canvas: HTMLCanvasElement | undefined;
+  handler!: ScreenSpaceEventHandler;
 
   constructor(selector?: string) {
-    super();
     if (selector) {
       this.container = query(selector);
       JkBase.viewer = new Viewer(this.container, viewerOptions);
-      this.ellipsoid = JkBase.viewer.scene.globe.ellipsoid;
       this.startFps();
+      this.startAction();
     }
   }
+
+  /**
+   * 注册 Cesium handler
+   */
+  private startAction() {
+    this.handler = new ScreenSpaceEventHandler(JkBase.viewer.scene.canvas);
+    this.handler.setInputAction(
+      this.handleLeftClick,
+      ScreenSpaceEventType.LEFT_CLICK
+    );
+    this.handler.setInputAction(
+      this.handleMouseMove,
+      ScreenSpaceEventType.MOUSE_MOVE
+    );
+  }
+
+  private handleLeftClick = (movement: Position) => {
+    const { position } = movement;
+    this.emit(cEnum.on_left_click, { position });
+  };
+
+  private handleMouseMove = (
+    movement: MovePosition
+  ) => {
+   const {endPosition,startPosition} = movement;
+
+    this.emit(cEnum.on_move_click, { endPosition,startPosition });
+   
+  };
+
+ 
 
   // 使用 Cesium postRender 统计实际完成的场景渲染帧，而不是浏览器刷新帧。
   startFps() {
@@ -43,13 +79,7 @@ export class JkBase extends EventTarget {
           this.fpsFrameCount = 0;
           this.fpsLastTime = now;
 
-          this.dispatchEvent(
-            new CustomEvent<CesiumInfo>(cEnum.fps_change, {
-              detail: {
-                fps,
-              },
-            })
-          );
+          this.emit(cEnum.fps_change, { fps });
         }
       }
     );
@@ -67,12 +97,18 @@ export class JkBase extends EventTarget {
     JkBase.viewer.destroy();
   }
 
-  // 统一封装事件订阅，并通过 CEvent 提供自定义事件名称和载荷类型提示。
+   // 统一向共享总线派发事件，供子模块调用（替换原本的 this.dispatchEvent）。
+   emit<K extends keyof CEvent>(event: K, detail: DetailOf<CEvent[K]>) {
+    JkBase.bus.dispatchEvent(new CustomEvent(event, { detail }));
+  }
+
+  // 统一封装事件订阅（订阅到共享总线），并通过 CEvent 提供类型提示。
   on<K extends keyof CEvent>(event: K, listener: (event: CEvent[K]) => void) {
-    this.addEventListener(event, listener as EventListener);
+    const handler = listener as EventListener;
+    JkBase.bus.addEventListener(event, handler);
 
     return () => {
-      this.removeEventListener(event, listener as EventListener);
+      JkBase.bus.removeEventListener(event, handler);
     };
   }
 }

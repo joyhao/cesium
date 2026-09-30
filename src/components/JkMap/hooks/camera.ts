@@ -27,14 +27,10 @@ export class JkCamera extends JkBase {
     this.height = Math.round(height);
     this.level = this.heightToLevel(height);
 
-    this.dispatchEvent(
-      new CustomEvent<CameraChangeDetail>(cEnum.camera_change, {
-        detail: {
-          height: this.height,
-          level: this.level,
-        },
-      })
-    );
+    this.emit(cEnum.camera_change, {
+      height: this.height,
+      level: this.level,
+    });
   };
 
   heightToLevel(height: number) {

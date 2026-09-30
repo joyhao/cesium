@@ -6,13 +6,23 @@
 // biome-ignore lint: disable
 export {}
 declare global {
+  const Appearance: typeof import('cesium')['Appearance']
+  const BoundingSphere: typeof import('cesium')['BoundingSphere']
+  const Cartesian2: typeof import('cesium')['Cartesian2']
   const Cartesian3: typeof import('cesium')['Cartesian3']
   const ClockRange: typeof import('cesium')['ClockRange']
   const Color: typeof import('cesium')['Color']
+  const ComponentDatatype: typeof import('cesium')['ComponentDatatype']
   const EffectScope: typeof import('vue')['EffectScope']
+  const Geometry: typeof import('cesium')['Geometry']
+  const GeometryAttribute: typeof import('cesium')['GeometryAttribute']
+  const GeometryAttributes: typeof import('cesium')['GeometryAttributes']
+  const GeometryInstance: typeof import('cesium')['GeometryInstance']
   const ImageryLayer: typeof import('cesium')['ImageryLayer']
   const JulianDate: typeof import('cesium')['JulianDate']
   const OpenStreetMapImageryProvider: typeof import('cesium')['OpenStreetMapImageryProvider']
+  const Primitive: typeof import('cesium')['Primitive']
+  const PrimitiveType: typeof import('cesium')['PrimitiveType']
   const SampledPositionProperty: typeof import('cesium')['SampledPositionProperty']
   const UrlTemplateImageryProvider: typeof import('cesium')['UrlTemplateImageryProvider']
   const Viewer: typeof import('cesium')['Viewer']

@@ -39,6 +39,7 @@ export default defineConfig({
             "UrlTemplateImageryProvider",
             "SampledPositionProperty",
             "Viewer",
+          
           ],
         },
       ],

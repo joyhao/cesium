@@ -41,3 +41,4 @@ export function isPointInRectangle(point: PointPosition, rectangle: Rectangle) {
     cartographic.latitude <= rectangle.north
   );
 }
+
