@@ -207,14 +207,30 @@ export class JkPoints extends JkBase {
     ids: number[],
     force = false,
   ) {
-    const nextIds = new Set(ids);
+    // Worker 只按经纬度视口矩形粗筛，这里再按屏幕坐标精筛画布外的点，
+    // 保证统计数与实际渲染数一致（否则会出现"显示 5 个只见 4 个"）。
+    const visible = this.cullToCanvas(positions, ids);
+    const nextIds = new Set(visible.ids);
     const setChanged = !this.sameVisibleSet(nextIds);
 
     // 视口内点位集合未变化（且非强制重绘）时不重建，避免无谓开销。
     if (!force && !setChanged) return;
 
-    const colors = computeColors(ids, this.selectedIds, this.hoverId);
-    const primitive = createCircle(positions, colors);
+    // 视口内无点位时直接清空：空几何会让 Cesium 创建 0 字节顶点缓冲而抛错。
+    if (visible.positions.length === 0) {
+      this.removeVisiblePrimitive();
+      this.labelCollection?.removeAll();
+      this.visiblePrimitive = undefined;
+      this.visibleIds = nextIds;
+      this.visibleCount = 0;
+      this.visiblePositions = visible.positions;
+      this.visibleIdsList = visible.ids;
+      this.emitChange();
+      return;
+    }
+
+    const colors = computeColors(visible.ids, this.selectedIds, this.hoverId);
+    const primitive = createCircle(visible.positions, colors);
 
     if (primitive) {
       this.viewer.scene.primitives.add(primitive);
@@ -224,12 +240,51 @@ export class JkPoints extends JkBase {
 
     this.visiblePrimitive = primitive;
     this.visibleIds = nextIds;
-    this.visibleCount = positions.length / 3;
-    this.visiblePositions = positions;
-    this.visibleIdsList = ids;
+    this.visibleCount = visible.positions.length / 3;
+    this.visiblePositions = visible.positions;
+    this.visibleIdsList = visible.ids;
     // 点位集合变化时才重建标签；hover/点击只改色，跳过标签重建避免抖动。
-    if (setChanged) this.updateLabels(positions, ids);
+    if (setChanged) this.updateLabels(visible.positions, visible.ids);
     this.emitChange();
+  }
+
+  /**
+   * 按屏幕坐标剔除画布外的点。Worker 的经纬度视口矩形是包围盒，边界处可能比
+   * 实际画布更大；保留约半个最大点径的边距，让边缘只露一半的点仍算可见。
+   */
+  private cullToCanvas(positions: Float64Array, ids: number[]) {
+    const scene = this.viewer.scene;
+    const { clientWidth: width, clientHeight: height } = scene.canvas;
+    const keptPositions = new Float64Array(positions.length);
+    const keptIds: number[] = [];
+    const cart = new Cartesian3();
+    const margin = 32;
+    let n = 0;
+
+    for (let i = 0; i < ids.length; i++) {
+      cart.x = positions[i * 3];
+      cart.y = positions[i * 3 + 1];
+      cart.z = positions[i * 3 + 2];
+
+      const screen = scene.cartesianToCanvasCoordinates(cart);
+      if (
+        !screen ||
+        screen.x < -margin ||
+        screen.x > width + margin ||
+        screen.y < -margin ||
+        screen.y > height + margin
+      ) {
+        continue;
+      }
+
+      keptPositions[n * 3] = cart.x;
+      keptPositions[n * 3 + 1] = cart.y;
+      keptPositions[n * 3 + 2] = cart.z;
+      keptIds.push(ids[i]);
+      n++;
+    }
+
+    return { positions: keptPositions.subarray(0, n * 3), ids: keptIds };
   }
 
   /** 用统一后的 PointPosition.label 重建标签集合；仅在可见点位集合变化时调用。 */
