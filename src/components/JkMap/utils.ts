@@ -21,7 +21,7 @@ export function sleep(ms: number): Promise<void> {
  * @param rectangle  相机视野范围  单位是弧度
  * @returns
  */
-export function isPointInRectangle(point: PointPosition, rectangle: RectLike) {
+export function isInRect(point: PointPosition, rectangle: RectLike) {
   // 当前点位经纬度转换成笛卡尔坐标
   const cartographic = Cartographic.fromDegrees(
     point.lon,
@@ -57,6 +57,17 @@ export function isPointInRectangle(point: PointPosition, rectangle: RectLike) {
  * @param selectedIds 已选中的点位 id 集合
  * @param hoverId 当前悬停的点位 id
  */
+/** 单点的颜色：选中橙、悬停黄、其余默认青。纯函数，供 computeColors 与单遍合并渲染复用。 */
+export function pickColor(
+  selectedIds: Set<number>,
+  hoverId: number | undefined,
+  id: number,
+): number[] {
+  if (selectedIds.has(id)) return JkColor.SELECTED_COLOR;
+  if (hoverId === id) return JkColor.HOVER_COLOR;
+  return JkColor.DEFAULT_COLOR;
+}
+
 export function computeColors(
   ids: number[],
   selectedIds: Set<number>,
@@ -66,11 +77,7 @@ export function computeColors(
   const colors = new Float32Array(count * 4);
 
   for (let i = 0; i < count; i++) {
-    let color: number[];
-    if (selectedIds.has(ids[i])) color = JkColor.SELECTED_COLOR;
-    else if (hoverId === ids[i]) color = JkColor.HOVER_COLOR;
-    else color = JkColor.DEFAULT_COLOR;
-
+    const color = pickColor(selectedIds, hoverId, ids[i]);
     colors[i * 4] = color[0];
     colors[i * 4 + 1] = color[1];
     colors[i * 4 + 2] = color[2];

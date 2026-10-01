@@ -1,5 +1,5 @@
 import { Cartesian3, Rectangle } from "@cesium/engine";
-import { isPointInRectangle } from "../utils";
+import { isInRect } from "../utils";
 import type { InMessage, PointPosition } from "../type/map.type";
 
 // Worker 内累积主线程分批下发的点位，后续仅按视口矩形筛选。
@@ -19,11 +19,8 @@ ctx.onmessage = (event: MessageEvent<InMessage>) => {
   }
 
   if (message.type === "filter") {
-    console.log(message);
-
-    const visible = points.filter((point) =>
-      isPointInRectangle(point, message.rectangle),
-    );
+    const { rectangle } = message;
+    const visible = points.filter((point) => isInRect(point, rectangle));
 
     // 直接以扁平 Float64Array 输出 xyz，省去主线程再次转换。
     const positions = new Float64Array(visible.length * 3);

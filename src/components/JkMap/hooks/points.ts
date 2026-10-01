@@ -13,7 +13,7 @@ import { JkBase } from "./base";
 
 import { CLICK_THRESHOLD } from "../entity/entity";
 import { createCircle } from "../shape/circle";
-import { computeColors } from "../utils";
+import { pickColor } from "../utils";
 
 export class JkPoints extends JkBase {
   worker = new Worker(new URL("../worker/points.worker.ts", import.meta.url), {
@@ -213,7 +213,9 @@ export class JkPoints extends JkBase {
     // 视口内点位集合未变化（且非强制重绘）时不重建，避免无谓开销。
     if (!force && !setChanged) return;
 
-    const colors = computeColors(ids, this.selectedIds, this.hoverId);
+    // 单遍遍历 ids：同时算颜色数组、按需重建标签，圆点与文字拧到一处，不再各开一个循环。
+    const colors = this.buildColorsAndLabels(positions, ids, setChanged);
+
     const primitive = createCircle(positions, colors);
 
     if (primitive) {
@@ -227,36 +229,55 @@ export class JkPoints extends JkBase {
     this.visibleCount = positions.length / 3;
     this.visiblePositions = positions;
     this.visibleIdsList = ids;
-    // 点位集合变化时才重建标签；hover/点击只改色，跳过标签重建避免抖动。
-    if (setChanged) this.updateLabels(positions, ids);
     this.emitChange();
   }
 
-  /** 用统一后的 PointPosition.label 重建标签集合；仅在可见点位集合变化时调用。 */
-  private updateLabels(positions: Float64Array, ids: number[]) {
-    if (!this.labelCollection) return;
-    this.labelCollection.removeAll();
+  /**
+   * 单遍遍历 ids，同时产出 aColor 颜色数组与文字标签：
+   * - 颜色每点必算（点击/悬停改色也走这里）；
+   * - 标签仅在可见集合变化时重建（rebuildLabels=true），hover/点击只改色跳过，避免抖动。
+   * 合并后每次重建只迭代 ids 一次，圆点与文字逻辑收进同一处。
+   */
+  private buildColorsAndLabels(
+    positions: Float64Array,
+    ids: number[],
+    rebuildLabels: boolean,
+  ): Float32Array {
+    const count = ids.length;
+    const colors = new Float32Array(count * 4);
+    if (rebuildLabels) this.labelCollection?.removeAll();
 
-    for (let i = 0; i < ids.length; i++) {
-      const point = this.points[ids[i]];
-      if (!point) continue;
+    for (let i = 0; i < count; i++) {
+      const id = ids[i];
+      const color = pickColor(this.selectedIds, this.hoverId, id);
+      colors[i * 4] = color[0];
+      colors[i * 4 + 1] = color[1];
+      colors[i * 4 + 2] = color[2];
+      colors[i * 4 + 3] = color[3];
 
-      this.labelCollection.add({
-        position: new Cartesian3(
-          positions[i * 3],
-          positions[i * 3 + 1],
-          positions[i * 3 + 2],
-        ),
-        text: point.label,
-        font: "12px sans-serif",
-        fillColor: Color.WHITE,
-        outlineColor: Color.BLACK,
-        outlineWidth: 2,
-        style: LabelStyle.FILL_AND_OUTLINE,
-        pixelOffset: new Cartesian2(0, -14),
-        disableDepthTestDistance: Number.POSITIVE_INFINITY,
-      });
+      if (rebuildLabels) {
+        const point = this.points[id];
+        if (!point) continue;
+
+        this.labelCollection?.add({
+          position: new Cartesian3(
+            positions[i * 3],
+            positions[i * 3 + 1],
+            positions[i * 3 + 2],
+          ),
+          text: point.label,
+          font: "12px sans-serif",
+          fillColor: Color.WHITE,
+          outlineColor: Color.BLACK,
+          outlineWidth: 2,
+          style: LabelStyle.FILL_AND_OUTLINE,
+          pixelOffset: new Cartesian2(0, -14),
+          disableDepthTestDistance: Number.POSITIVE_INFINITY,
+        });
+      }
     }
+
+    return colors;
   }
 
   /**
