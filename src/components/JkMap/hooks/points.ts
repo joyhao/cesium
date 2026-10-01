@@ -6,7 +6,7 @@ import { JkBase } from "./base";
 
 import { CLICK_THRESHOLD } from "../entity/entity";
 import { createCircle } from "../shape/circle";
-import { computeColors } from "../utils";
+import { computeColors, debounce } from "../utils";
 
 export class JkPoints extends JkBase {
   worker = new Worker(new URL("../worker/points.worker.ts", import.meta.url), {
@@ -127,17 +127,6 @@ export class JkPoints extends JkBase {
     return bestId;
   }
 
-  scheduleVisibilityUpdate = () => {
-    if (this.visibilityTimer) {
-      clearTimeout(this.visibilityTimer);
-    }
-
-    this.visibilityTimer = setTimeout(() => {
-      this.visibilityTimer = undefined;
-      this.syncVisiblePoints();
-    }, 300);
-  };
-
   /**
    * 分帧生成点位：每帧只生成一小批（默认 1000），立即发给 Worker 并刷新视口，
    * 帧间让出主线程，避免一次性循环 30 万点阻塞渲染。
@@ -154,7 +143,6 @@ export class JkPoints extends JkBase {
 
       this.points.push(...chunk);
       this.worker.postMessage({ type: "add", points: chunk });
-      this.syncVisiblePoints();
 
       generated = end;
 
@@ -165,6 +153,17 @@ export class JkPoints extends JkBase {
 
     requestAnimationFrame(step);
   }
+
+  scheduleVisibilityUpdate = () => {
+    if (this.visibilityTimer) {
+      clearTimeout(this.visibilityTimer);
+    }
+
+    this.visibilityTimer = setTimeout(() => {
+      this.visibilityTimer = undefined;
+      this.syncVisiblePoints();
+    }, 300);
+  };
 
   /**
    * 计算视口矩形，交给 Worker 筛选点位并返回坐标数组

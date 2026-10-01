@@ -1,7 +1,6 @@
-import { Viewer } from "cesium";
-import { cEnum, CEvent } from "../event/event";
+import { Viewer, Event } from "cesium";
+import { cEnum } from "../event/event";
 
-import { CameraChangeDetail } from "../type/map.type";
 import { JkBase } from "./base";
 
 // 监听 Cesium 相机变化，并向上层发布高度和层级信息。
@@ -9,16 +8,17 @@ export class JkCamera extends JkBase {
   viewer: Viewer;
   height = 0;
   level = 0;
-  removeCameraChanged?: () => void;
+  // 收集所有事件监听的移除函数，destroy 时统一执行，避免每个监听写一对字段。
+  private disposers: Event.RemoveCallback[] = [];
 
   constructor() {
     super();
 
     this.viewer = JkBase.viewer;
-    this.update();
 
-    this.removeCameraChanged = this.viewer.camera.changed.addEventListener(
-      this.update,
+    this.disposers.push(
+      this.viewer.camera.changed.addEventListener(this.update),
+      this.viewer.camera.moveEnd.addEventListener(this.end),
     );
   }
 
@@ -31,6 +31,10 @@ export class JkCamera extends JkBase {
       height: this.height,
       level: this.level,
     });
+  };
+
+  private end = () => {
+    this.emit(cEnum.camera_end, {});
   };
 
   heightToLevel(height: number) {
@@ -46,7 +50,7 @@ export class JkCamera extends JkBase {
   }
 
   destroy() {
-    this.removeCameraChanged?.();
-    this.removeCameraChanged = undefined;
+    this.disposers.forEach((dispose) => dispose());
+    this.disposers = [];
   }
 }

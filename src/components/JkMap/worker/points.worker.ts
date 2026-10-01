@@ -1,13 +1,6 @@
 import { Cartesian3, Rectangle } from "@cesium/engine";
 import { isPointInRectangle } from "../utils";
-import type { PointPosition } from "../type/map.type";
-
-type RectLike = { west: number; east: number; south: number; north: number };
-
-// 主线程分批次追加点位，避免一次性传输全量数据。
-type AddMessage = { type: "add"; points: PointPosition[] };
-type FilterMessage = { type: "filter"; rectangle: RectLike };
-type InMessage = AddMessage | FilterMessage;
+import type { InMessage, PointPosition } from "../type/map.type";
 
 // Worker 内累积主线程分批下发的点位，后续仅按视口矩形筛选。
 let points: PointPosition[] = [];

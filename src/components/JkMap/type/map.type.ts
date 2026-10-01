@@ -3,6 +3,18 @@ import { Cartesian2 } from "cesium";
 // 从 CEvent 的 CustomEvent<T> 中取出载荷类型 T
 export type DetailOf<E> = E extends CustomEvent<infer D> ? D : never;
 
+export type RectLike = {
+  west: number;
+  east: number;
+  south: number;
+  north: number;
+};
+
+// 主线程分批次追加点位，避免一次性传输全量数据。
+export type AddMessage = { type: "add"; points: PointPosition[] };
+export type FilterMessage = { type: "filter"; rectangle: RectLike };
+export type InMessage = AddMessage | FilterMessage;
+
 export type WorkerResult = {
   type: "result";
   positions: Float64Array;
