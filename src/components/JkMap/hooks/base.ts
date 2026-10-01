@@ -1,15 +1,10 @@
 import { cEnum, CEvent } from "../event/event";
-import {
-  ScreenSpaceEventHandler,
-  ScreenSpaceEventType,
-  Viewer,
-} from "cesium";
+import { ScreenSpaceEventHandler, ScreenSpaceEventType, Viewer } from "cesium";
 import { viewerOptions } from "../entity/entity";
 import { query } from "../utils";
-import {  DetailOf,  MovePosition, Position } from "../type/map.type";
+import { DetailOf, MovePosition, Position } from "../type/map.type";
 
-
-export class JkBase  {
+export class JkBase {
   // 当前项目所有地图子模块共享同一个 Cesium Viewer。
   static viewer: Viewer;
   private static bus = new EventTarget();
@@ -36,11 +31,11 @@ export class JkBase  {
     this.handler = new ScreenSpaceEventHandler(JkBase.viewer.scene.canvas);
     this.handler.setInputAction(
       this.handleLeftClick,
-      ScreenSpaceEventType.LEFT_CLICK
+      ScreenSpaceEventType.LEFT_CLICK,
     );
     this.handler.setInputAction(
       this.handleMouseMove,
-      ScreenSpaceEventType.MOUSE_MOVE
+      ScreenSpaceEventType.MOUSE_MOVE,
     );
   }
 
@@ -49,16 +44,11 @@ export class JkBase  {
     this.emit(cEnum.on_left_click, { position });
   };
 
-  private handleMouseMove = (
-    movement: MovePosition
-  ) => {
-   const {endPosition,startPosition} = movement;
+  private handleMouseMove = (movement: MovePosition) => {
+    const { endPosition, startPosition } = movement;
 
-    this.emit(cEnum.on_move_click, { endPosition,startPosition });
-   
+    this.emit(cEnum.on_move_click, { endPosition, startPosition });
   };
-
- 
 
   // 使用 Cesium postRender 统计实际完成的场景渲染帧，而不是浏览器刷新帧。
   startFps() {
@@ -81,7 +71,7 @@ export class JkBase  {
 
           this.emit(cEnum.fps_change, { fps });
         }
-      }
+      },
     );
   }
 
@@ -97,8 +87,8 @@ export class JkBase  {
     JkBase.viewer.destroy();
   }
 
-   // 统一向共享总线派发事件，供子模块调用（替换原本的 this.dispatchEvent）。
-   emit<K extends keyof CEvent>(event: K, detail: DetailOf<CEvent[K]>) {
+  // 统一向共享总线派发事件，供子模块调用（替换原本的 this.dispatchEvent）。
+  emit<K extends keyof CEvent>(event: K, detail: DetailOf<CEvent[K]>) {
     JkBase.bus.dispatchEvent(new CustomEvent(event, { detail }));
   }
 

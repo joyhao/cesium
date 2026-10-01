@@ -18,7 +18,7 @@ export class JkCamera extends JkBase {
     this.update();
 
     this.removeCameraChanged = this.viewer.camera.changed.addEventListener(
-      this.update
+      this.update,
     );
   }
 

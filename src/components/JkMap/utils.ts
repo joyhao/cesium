@@ -25,7 +25,7 @@ export function isPointInRectangle(point: PointPosition, rectangle: Rectangle) {
   const cartographic = Cartographic.fromDegrees(
     point.longitude,
     point.latitude,
-    point.height
+    point.height,
   );
 
   // 当前视口没有跨越子午线
@@ -41,4 +41,3 @@ export function isPointInRectangle(point: PointPosition, rectangle: Rectangle) {
     cartographic.latitude <= rectangle.north
   );
 }
-

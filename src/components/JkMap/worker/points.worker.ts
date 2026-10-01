@@ -31,7 +31,7 @@ ctx.onmessage = (event: MessageEvent<InMessage>) => {
       message.rectangle.west,
       message.rectangle.south,
       message.rectangle.east,
-      message.rectangle.north
+      message.rectangle.north,
     );
 
     const visible = points.filter((point) => isPointInRectangle(point, rect));
@@ -45,7 +45,7 @@ ctx.onmessage = (event: MessageEvent<InMessage>) => {
       const cartesian = Cartesian3.fromDegrees(
         point.longitude,
         point.latitude,
-        point.height
+        point.height,
       );
       positions[i * 3] = cartesian.x;
       positions[i * 3 + 1] = cartesian.y;

@@ -1,25 +1,11 @@
-import {
-  Appearance,
-  BoundingSphere,
-  Cartesian2,
-  Cartesian3,
-  ComponentDatatype,
-  Geometry,
-  GeometryAttribute,
-  GeometryAttributes,
-  GeometryInstance,
-  Primitive,
-  PrimitiveType,
-} from "cesium";
+import { Cartesian2, Cartesian3, Primitive } from "cesium";
 import { usePoints, POINT_COUNT } from "@store/points";
 import { cEnum } from "../event/event";
-import type {  PointPosition, WorkerResult } from "../type/map.type";
+import type { PointPosition, WorkerResult } from "../type/map.type";
 import { JkBase } from "./base";
 
-import circleVertShader from "@com/JkMap/shader/circle.vert.glsl";
-import circleFragShader from "@com/JkMap/shader/circle.frag.glsl";
 import { CLICK_THRESHOLD, JkColor } from "../entity/entity";
-
+import { createCircle } from "../shape/circle";
 
 export class JkPoints extends JkBase {
   viewer = JkBase.viewer;
@@ -50,28 +36,25 @@ export class JkPoints extends JkBase {
     // 点位筛选放到 Worker 执行，主线程只负责建 Primitive。
     this.worker = new Worker(
       new URL("../worker/points.worker.ts", import.meta.url),
-      { type: "module" }
+      { type: "module" },
     );
     this.worker.onmessage = this.onWorkerMessage;
     // 分帧生成点位并增量下发，避免一次性生成 + 传输全量数据阻塞主线程。
     this.generatePointsInFrames(POINT_COUNT);
 
-  
-
     // 绑定事件
-    this.on("on_left_click",event=>{
-      const {position} = event.detail
-     this.onLeftClick(position)
-    })
+    this.on("on_left_click", (event) => {
+      const { position } = event.detail;
+      this.onLeftClick(position);
+    });
 
-    this.on("on_move_click",event=>{
-      const {startPosition,endPosition} = event.detail
-      this.onMoveClick(startPosition,endPosition)
-    })
-  } 
+    this.on("on_move_click", (event) => {
+      const { startPosition, endPosition } = event.detail;
+      this.onMoveClick(startPosition, endPosition);
+    });
+  }
 
-  onLeftClick(position:Cartesian2){
-    
+  onLeftClick(position: Cartesian2) {
     const id = this.pickPoint(position);
     if (id === undefined) return;
 
@@ -84,8 +67,8 @@ export class JkPoints extends JkBase {
     }
   }
 
-  onMoveClick(startPosition:Cartesian2,endPosition:Cartesian2){
-     // 节流：一个周期内只处理一次，避免高频 mousemove 卡顿。
+  onMoveClick(startPosition: Cartesian2, endPosition: Cartesian2) {
+    // 节流：一个周期内只处理一次，避免高频 mousemove 卡顿。
     if (this.hoverTimer) return;
     this.hoverTimer = setTimeout(() => {
       this.hoverTimer = undefined;
@@ -99,7 +82,6 @@ export class JkPoints extends JkBase {
     this.replacePrimitive(data.positions, data.ids);
   };
 
-
   /** 拾取鼠标下的点位并更新 hover 状态，命中变化才重绘。 */
   private applyHover(position: Cartesian2) {
     const id = this.pickPoint(position);
@@ -107,7 +89,8 @@ export class JkPoints extends JkBase {
     this.hoverId = id;
     // 悬停在点位上显示手型光标，提示可点击；移开恢复默认。
     if (this.viewer) {
-      this.viewer.scene.canvas.style.cursor = id !== undefined ? "pointer" : "default";
+      this.viewer.scene.canvas.style.cursor =
+        id !== undefined ? "pointer" : "default";
     }
     if (this.visiblePositions) {
       this.replacePrimitive(this.visiblePositions, this.visibleIdsList, true);
@@ -126,7 +109,7 @@ export class JkPoints extends JkBase {
       const cart = new Cartesian3(
         this.visiblePositions[i * 3],
         this.visiblePositions[i * 3 + 1],
-        this.visiblePositions[i * 3 + 2]
+        this.visiblePositions[i * 3 + 2],
       );
       const screen = scene.cartesianToCanvasCoordinates(cart);
       if (!screen) continue;
@@ -183,9 +166,11 @@ export class JkPoints extends JkBase {
   /** 计算视口矩形，交给 Worker 筛选点位并返回坐标数组。 */
   syncVisiblePoints() {
     if (!this.viewer || this.viewer.isDestroyed()) return;
-    
+
     //  地球椭球体（Ellipsoid）对象   WGS84
-    const rectangle = this.viewer.camera.computeViewRectangle(this.viewer.scene.globe.ellipsoid);
+    const rectangle = this.viewer.camera.computeViewRectangle(
+      this.viewer.scene.globe.ellipsoid,
+    );
 
     // 相机正在初始化或视角朝向太空时没有有效视口，直接清空。
     if (!rectangle) {
@@ -208,7 +193,7 @@ export class JkPoints extends JkBase {
   private replacePrimitive(
     positions: Float64Array,
     ids: number[],
-    force = false
+    force = false,
   ) {
     if (!this.viewer || this.viewer.isDestroyed()) return;
 
@@ -216,45 +201,14 @@ export class JkPoints extends JkBase {
 
     // 视口内点位集合未变化时不重建 Primitive，避免无谓开销。
     if (!force && this.sameVisibleSet(nextIds)) return;
-
-    const nextAppearance = new Appearance({
-      vertexShaderSource: circleVertShader,
-      fragmentShaderSource: circleFragShader,
-      // 半透明
-      translucent: true,
-      closed: false,
-      renderState: {
-        // 绘制时写入深度缓冲 让点之间能正确互相遮挡
-        depthMask: true,
-        // 启深度测试
-        depthTest: {
-          enabled: true,
-        },
-      },
-    });
-
-    const nextPrimitive = positions.length
-      ? new Primitive({
-          geometryInstances: new GeometryInstance({
-            geometry: this.createGeometryFromPositions(positions, ids),
-          }),
-          appearance: nextAppearance,
-          // 自定义 Geometry 没有对应 worker，无法异步加载，必须同步创建。
-          // 坐标已由 Worker 算好，这里只做轻量包装，同步开销很小。
-          asynchronous: false,
-          allowPicking: false,
-          // 几何体创建完成后，释放 geometryInstances 数组的引用。
-          releaseGeometryInstances: true,
-        })
-      : undefined;
-
-    if (nextPrimitive) {
-      this.viewer.scene.primitives.add(nextPrimitive);
+    const primitive = createCircle(positions, ids);
+    if (primitive) {
+      this.viewer.scene.primitives.add(primitive);
     }
 
     this.removeVisiblePrimitive();
 
-    this.visiblePrimitive = nextPrimitive;
+    this.visiblePrimitive = primitive;
     this.visibleIds = nextIds;
     this.visibleCount = positions.length / 3;
     this.visiblePositions = positions;
@@ -285,46 +239,6 @@ export class JkPoints extends JkBase {
     } catch {
       // 仍在销毁流程中的 Primitive 忽略异常。
     }
-  }
-
-  /**
-   * 所有点位的 xyz 写入同一个 Geometry，使用 PrimitiveType.POINTS 让 GPU 以
-   * gl_PointSize 渲染圆点；每个点再带一个 aColor 顶点属性用于点击变色。
-   * 只有一个几何体、一次 draw call，渲染 1 万点也很轻量。
-   */
-  private createGeometryFromPositions(positions: Float64Array, ids: number[]) {
-    const count = positions.length / 3;
-    const colors = new Float32Array(count * 4);
-
-    for (let i = 0; i < count; i++) {
-      let color=[]
-      if (this.selectedIds.has(ids[i])) color = JkColor.SELECTED_COLOR;
-      else if (this.hoverId === ids[i]) color = JkColor.HOVER_COLOR;
-      else color = JkColor.DEFAULT_COLOR;
-      colors[i * 4] = color[0];
-      colors[i * 4 + 1] = color[1];
-      colors[i * 4 + 2] = color[2];
-      colors[i * 4 + 3] = color[3];
-    }
-
-    const attributes = new GeometryAttributes();
-    attributes.position = new GeometryAttribute({
-      componentDatatype: ComponentDatatype.DOUBLE,
-      componentsPerAttribute: 3,
-      values: positions,
-    });
-    // @ts-ignore
-    attributes.aColor = new GeometryAttribute({
-      componentDatatype: ComponentDatatype.FLOAT,
-      componentsPerAttribute: 4,
-      values: colors,
-    });
-
-    return new Geometry({
-      attributes,
-      primitiveType: PrimitiveType.POINTS,
-      boundingSphere: BoundingSphere.fromVertices(positions),
-    });
   }
 
   private emitChange() {

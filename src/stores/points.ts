@@ -22,7 +22,7 @@ function createGlobalPoint(id: number): PointPosition {
 export const usePoints = defineStore("points", () => {
   function createPoints(count = POINT_COUNT, start = 0): PointPosition[] {
     return Array.from({ length: count }, (_, index) =>
-      createGlobalPoint(start + index)
+      createGlobalPoint(start + index),
     );
   }
 

@@ -9,7 +9,9 @@ const appStore = useAppStore();
   <aside class="sidebar" :class="{ collapsed: appStore.sidebarCollapsed }">
     <div class="brand">
       <span class="brand-mark">◈</span>
-      <span v-if="!appStore.sidebarCollapsed">CESIUM<small>ANIMATION LAB</small></span>
+      <span v-if="!appStore.sidebarCollapsed"
+        >CESIUM<small>ANIMATION LAB</small></span
+      >
     </div>
     <nav class="menu">
       <RouterLink
@@ -27,6 +29,8 @@ const appStore = useAppStore();
     <button class="collapse-btn" @click="appStore.toggleSidebar()">
       {{ appStore.sidebarCollapsed ? "»" : "«" }}
     </button>
-    <footer v-if="!appStore.sidebarCollapsed" class="side-foot">VUE 3 · PINIA · CESIUM</footer>
+    <footer v-if="!appStore.sidebarCollapsed" class="side-foot">
+      VUE 3 · PINIA · CESIUM
+    </footer>
   </aside>
 </template>

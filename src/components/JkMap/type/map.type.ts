@@ -1,13 +1,13 @@
 import { Cartesian2 } from "cesium";
 
-
 // 从 CEvent 的 CustomEvent<T> 中取出载荷类型 T
 export type DetailOf<E> = E extends CustomEvent<infer D> ? D : never;
 
-export type WorkerResult = { type: "result"; positions: Float64Array; ids: number[] };
-
-
-
+export type WorkerResult = {
+  type: "result";
+  positions: Float64Array;
+  ids: number[];
+};
 
 export interface PointPosition {
   id: number;
@@ -15,13 +15,13 @@ export interface PointPosition {
   latitude: number;
   height: number;
 }
-export interface Position{
-   position: Cartesian2
+export interface Position {
+  position: Cartesian2;
 }
 
-export interface MovePosition{
+export interface MovePosition {
   startPosition: Cartesian2;
-   endPosition: Cartesian2
+  endPosition: Cartesian2;
 }
 
 export interface AppConfig {
