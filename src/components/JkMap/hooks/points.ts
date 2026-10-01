@@ -4,10 +4,15 @@ import { cEnum } from "../event/event";
 import type { PointPosition, WorkerResult } from "../type/map.type";
 import { JkBase } from "./base";
 
-import { CLICK_THRESHOLD, JkColor } from "../entity/entity";
+import { CLICK_THRESHOLD } from "../entity/entity";
 import { createCircle } from "../shape/circle";
+import { computeColors } from "../utils";
 
 export class JkPoints extends JkBase {
+  worker = new Worker(new URL("../worker/points.worker.ts", import.meta.url), {
+    type: "module",
+  });
+
   viewer = JkBase.viewer;
   uPoint = usePoints();
   // 点位分帧生成，初始为空，随帧累积；totalCount 记录目标总数用于统计。
@@ -19,7 +24,6 @@ export class JkPoints extends JkBase {
   private visibleCount = 0;
   private visiblePrimitive?: Primitive;
   private visibilityTimer?: ReturnType<typeof setTimeout>;
-  private worker: Worker;
 
   // 最近一次 Worker 回传的可见点位坐标与 id，供 CPU 拾取使用。
   private visiblePositions?: Float64Array;
@@ -33,16 +37,13 @@ export class JkPoints extends JkBase {
 
   constructor() {
     super();
-    // 点位筛选放到 Worker 执行，主线程只负责建 Primitive。
-    this.worker = new Worker(
-      new URL("../worker/points.worker.ts", import.meta.url),
-      { type: "module" },
-    );
-    this.worker.onmessage = this.onWorkerMessage;
+
     // 分帧生成点位并增量下发，避免一次性生成 + 传输全量数据阻塞主线程。
-    this.generatePointsInFrames(POINT_COUNT);
+    this.generatePointsInFrames();
 
     // 绑定事件
+    this.worker.addEventListener("message", this.onWorkerMessage);
+
     this.on("on_left_click", (event) => {
       const { position } = event.detail;
       this.onLeftClick(position);
@@ -138,24 +139,26 @@ export class JkPoints extends JkBase {
   };
 
   /**
-   * 分帧生成点位：每帧只生成一小批（默认 1 万），立即发给 Worker 并刷新视口，
+   * 分帧生成点位：每帧只生成一小批（默认 1000），立即发给 Worker 并刷新视口，
    * 帧间让出主线程，避免一次性循环 30 万点阻塞渲染。
    */
-  private generatePointsInFrames(total: number, chunkSize = 10_000) {
-    this.totalCount = total;
+  private generatePointsInFrames(chunkSize = 1000) {
+    this.totalCount = POINT_COUNT;
+
     let generated = 0;
 
     const step = () => {
-      if (!this.viewer || this.viewer.isDestroyed()) return;
+      const end = Math.min(generated + chunkSize, this.totalCount);
 
-      const end = Math.min(generated + chunkSize, total);
-      const chunk = this.uPoint.createPoints(end - generated, generated);
+      const chunk = this.uPoint.createPoints(chunkSize, generated);
+
       this.points.push(...chunk);
       this.worker.postMessage({ type: "add", points: chunk });
       this.syncVisiblePoints();
 
       generated = end;
-      if (generated < total) {
+
+      if (generated < this.totalCount) {
         requestAnimationFrame(step);
       }
     };
@@ -163,10 +166,11 @@ export class JkPoints extends JkBase {
     requestAnimationFrame(step);
   }
 
-  /** 计算视口矩形，交给 Worker 筛选点位并返回坐标数组。 */
+  /**
+   * 计算视口矩形，交给 Worker 筛选点位并返回坐标数组
+   * @returns
+   */
   syncVisiblePoints() {
-    if (!this.viewer || this.viewer.isDestroyed()) return;
-
     //  地球椭球体（Ellipsoid）对象   WGS84
     const rectangle = this.viewer.camera.computeViewRectangle(
       this.viewer.scene.globe.ellipsoid,
@@ -189,42 +193,19 @@ export class JkPoints extends JkBase {
     });
   }
 
-  /**
-   * 根据每个点的选中/悬停态算出 aColor 颜色数组（每点 4 个分量）。
-   * 选中橙、悬停黄、其余默认青；颜色业务全部集中在 points.ts，shape/circle 不感知。
-   */
-  private computeColors(ids: number[]): Float32Array {
-    const count = ids.length;
-    const colors = new Float32Array(count * 4);
-
-    for (let i = 0; i < count; i++) {
-      let color: number[];
-      if (this.selectedIds.has(ids[i])) color = JkColor.SELECTED_COLOR;
-      else if (this.hoverId === ids[i]) color = JkColor.HOVER_COLOR;
-      else color = JkColor.DEFAULT_COLOR;
-
-      colors[i * 4] = color[0];
-      colors[i * 4 + 1] = color[1];
-      colors[i * 4 + 2] = color[2];
-      colors[i * 4 + 3] = color[3];
-    }
-    return colors;
-  }
-
   /** 用 Worker 回传的坐标数组批量构建一个 Primitive。 */
   private replacePrimitive(
     positions: Float64Array,
     ids: number[],
     force = false,
   ) {
-    if (!this.viewer || this.viewer.isDestroyed()) return;
-
     const nextIds = new Set(ids);
 
     // 视口内点位集合未变化时不重建 Primitive，避免无谓开销。
     if (!force && this.sameVisibleSet(nextIds)) return;
-    const colors = this.computeColors(ids);
+    const colors = computeColors(ids, this.selectedIds, this.hoverId);
     const primitive = createCircle(positions, colors);
+
     if (primitive) {
       this.viewer.scene.primitives.add(primitive);
     }
@@ -273,14 +254,12 @@ export class JkPoints extends JkBase {
 
   clear() {
     if (!this.viewer || this.viewer.isDestroyed()) return;
-
     this.removeVisiblePrimitive();
     this.visibleIds.clear();
     this.visibleCount = 0;
     this.visiblePositions = undefined;
     this.visibleIdsList = [];
     this.hoverId = undefined;
-    if (this.viewer) this.viewer.scene.canvas.style.cursor = "default";
     this.emitChange();
   }
 

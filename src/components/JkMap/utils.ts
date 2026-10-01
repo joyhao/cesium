@@ -1,5 +1,6 @@
 import { Rectangle, Cartographic } from "@cesium/engine";
 import { PointPosition } from "./type/map.type";
+import { JkColor } from "./entity/entity";
 
 export function query(selector: string) {
   return document.querySelector(selector) as HTMLElement;
@@ -40,4 +41,34 @@ export function isPointInRectangle(point: PointPosition, rectangle: Rectangle) {
     cartographic.latitude >= rectangle.south &&
     cartographic.latitude <= rectangle.north
   );
+}
+
+/**
+ * 根据每个点的选中/悬停态算出 aColor 颜色数组（每点 4 个分量）。
+ * 选中橙、悬停黄、其余默认青；颜色业务由调用方通过 selectedIds/hoverId 注入，
+ * 本函数为纯函数，不依赖任何实例状态，供 points 等模块复用。
+ * @param ids 当前点位 id 列表
+ * @param selectedIds 已选中的点位 id 集合
+ * @param hoverId 当前悬停的点位 id
+ */
+export function computeColors(
+  ids: number[],
+  selectedIds: Set<number>,
+  hoverId: number | undefined,
+): Float32Array {
+  const count = ids.length;
+  const colors = new Float32Array(count * 4);
+
+  for (let i = 0; i < count; i++) {
+    let color: number[];
+    if (selectedIds.has(ids[i])) color = JkColor.SELECTED_COLOR;
+    else if (hoverId === ids[i]) color = JkColor.HOVER_COLOR;
+    else color = JkColor.DEFAULT_COLOR;
+
+    colors[i * 4] = color[0];
+    colors[i * 4 + 1] = color[1];
+    colors[i * 4 + 2] = color[2];
+    colors[i * 4 + 3] = color[3];
+  }
+  return colors;
 }

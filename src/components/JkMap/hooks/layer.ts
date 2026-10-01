@@ -27,8 +27,5 @@ export class JkLayer extends JkBase {
       credit: "天地图注记",
       maximumLevel: 18,
     });
-
-    this.viewer.imageryLayers.addImageryProvider(baseProvider);
-    this.viewer.imageryLayers.addImageryProvider(annotationProvider);
   }
 }
