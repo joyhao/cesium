@@ -24,8 +24,8 @@ export function sleep(ms: number): Promise<void> {
 export function isPointInRectangle(point: PointPosition, rectangle: RectLike) {
   // 当前点位经纬度转换成笛卡尔坐标
   const cartographic = Cartographic.fromDegrees(
-    point.longitude,
-    point.latitude,
+    point.lon,
+    point.lat,
     point.height,
   );
 

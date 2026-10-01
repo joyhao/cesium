@@ -1,4 +1,11 @@
-import { Cartesian2, Cartesian3, Primitive } from "cesium";
+import {
+  Cartesian2,
+  Cartesian3,
+  Color,
+  LabelCollection,
+  LabelStyle,
+  Primitive,
+} from "cesium";
 import { usePoints, POINT_COUNT } from "@store/points";
 import { cEnum } from "../event/event";
 import type { PointPosition, WorkerResult } from "../type/map.type";
@@ -23,6 +30,8 @@ export class JkPoints extends JkBase {
   private visibleIds = new Set<number>();
   private visibleCount = 0;
   private visiblePrimitive?: Primitive;
+  // 所有点位的文字标签集合，label 取自统一后的 PointPosition.label。
+  private labelCollection?: LabelCollection;
   private visibilityTimer?: ReturnType<typeof setTimeout>;
 
   // 最近一次 Worker 回传的可见点位坐标与 id，供 CPU 拾取使用。
@@ -40,6 +49,11 @@ export class JkPoints extends JkBase {
 
     // 分帧生成点位并增量下发，避免一次性生成 + 传输全量数据阻塞主线程。
     this.generatePointsInFrames();
+
+    // 所有点位的文字标签集合（label 取自统一后的 PointPosition.label）。
+    this.labelCollection = this.viewer.scene.primitives.add(
+      new LabelCollection({ scene: this.viewer.scene }),
+    );
 
     // 绑定事件
     this.worker.addEventListener("message", this.onWorkerMessage);
@@ -194,9 +208,11 @@ export class JkPoints extends JkBase {
     force = false,
   ) {
     const nextIds = new Set(ids);
+    const setChanged = !this.sameVisibleSet(nextIds);
 
-    // 视口内点位集合未变化时不重建 Primitive，避免无谓开销。
-    if (!force && this.sameVisibleSet(nextIds)) return;
+    // 视口内点位集合未变化（且非强制重绘）时不重建，避免无谓开销。
+    if (!force && !setChanged) return;
+
     const colors = computeColors(ids, this.selectedIds, this.hoverId);
     const primitive = createCircle(positions, colors);
 
@@ -211,7 +227,36 @@ export class JkPoints extends JkBase {
     this.visibleCount = positions.length / 3;
     this.visiblePositions = positions;
     this.visibleIdsList = ids;
+    // 点位集合变化时才重建标签；hover/点击只改色，跳过标签重建避免抖动。
+    if (setChanged) this.updateLabels(positions, ids);
     this.emitChange();
+  }
+
+  /** 用统一后的 PointPosition.label 重建标签集合；仅在可见点位集合变化时调用。 */
+  private updateLabels(positions: Float64Array, ids: number[]) {
+    if (!this.labelCollection) return;
+    this.labelCollection.removeAll();
+
+    for (let i = 0; i < ids.length; i++) {
+      const point = this.points[ids[i]];
+      if (!point) continue;
+
+      this.labelCollection.add({
+        position: new Cartesian3(
+          positions[i * 3],
+          positions[i * 3 + 1],
+          positions[i * 3 + 2],
+        ),
+        text: point.label,
+        font: "12px sans-serif",
+        fillColor: Color.WHITE,
+        outlineColor: Color.BLACK,
+        outlineWidth: 2,
+        style: LabelStyle.FILL_AND_OUTLINE,
+        pixelOffset: new Cartesian2(0, -14),
+        disableDepthTestDistance: Number.POSITIVE_INFINITY,
+      });
+    }
   }
 
   /**
@@ -249,6 +294,7 @@ export class JkPoints extends JkBase {
   clear() {
     if (!this.viewer || this.viewer.isDestroyed()) return;
     this.removeVisiblePrimitive();
+    this.labelCollection?.removeAll();
     this.visibleIds.clear();
     this.visibleCount = 0;
     this.visiblePositions = undefined;
@@ -268,6 +314,12 @@ export class JkPoints extends JkBase {
     }
 
     this.worker.terminate();
+
+    if (this.labelCollection && !this.viewer.isDestroyed()) {
+      this.viewer.scene.primitives.remove(this.labelCollection);
+      this.labelCollection = undefined;
+    }
+
     this.clear();
   }
 }

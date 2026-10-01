@@ -23,9 +23,10 @@ export type WorkerResult = {
 
 export interface PointPosition {
   id: number;
-  longitude: number;
-  latitude: number;
+  lon: number;
+  lat: number;
   height: number;
+  label: string;
 }
 export interface Position {
   position: Cartesian2;

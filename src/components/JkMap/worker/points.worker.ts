@@ -32,8 +32,8 @@ ctx.onmessage = (event: MessageEvent<InMessage>) => {
     for (let i = 0; i < visible.length; i++) {
       const point = visible[i];
       const cartesian = Cartesian3.fromDegrees(
-        point.longitude,
-        point.latitude,
+        point.lon,
+        point.lat,
         point.height,
       );
       positions[i * 3] = cartesian.x;
