@@ -1,6 +1,5 @@
 import circleVertShader from "@com/JkMap/shader/circle.vert.glsl";
 import circleFragShader from "@com/JkMap/shader/circle.frag.glsl";
-import { JkColor } from "../entity/entity";
 import {
   Appearance,
   BoundingSphere,
@@ -13,7 +12,11 @@ import {
   PrimitiveType,
 } from "cesium";
 
-export function createCircle(positions: Float64Array, ids: number[]) {
+/**
+ * 创建点位 Primitive。颜色完全由调用方决定：传入 colors（每点 4 个分量），
+ * 本函数只负责把颜色写进 aColor 顶点属性，不耦合任何选中/悬停业务。
+ */
+export function createCircle(positions: Float64Array, colors: Float32Array) {
   const appearance = new Appearance({
     vertexShaderSource: circleVertShader,
     fragmentShaderSource: circleFragShader,
@@ -32,7 +35,7 @@ export function createCircle(positions: Float64Array, ids: number[]) {
 
   const primitive = new Primitive({
     geometryInstances: new GeometryInstance({
-      geometry: createGeometry(positions, ids),
+      geometry: createGeometry(positions, colors),
     }),
     appearance: appearance,
     // 自定义 Geometry 没有对应 worker，无法异步加载，必须同步创建。
@@ -51,23 +54,7 @@ export function createCircle(positions: Float64Array, ids: number[]) {
  * gl_PointSize 渲染圆点；每个点再带一个 aColor 顶点属性用于点击变色。
  * 只有一个几何体、一次 draw call，渲染 1 万点也很轻量。
  */
-function createGeometry(positions: Float64Array, ids: number[]) {
-  const count = positions.length / 3;
-  const colors = new Float32Array(count * 4);
-
-  for (let i = 0; i < count; i++) {
-    let color = [];
-    //   if (this.selectedIds.has(ids[i])) color = JkColor.SELECTED_COLOR;
-    //   else if (this.hoverId === ids[i]) color = JkColor.HOVER_COLOR;
-    //   else
-
-    color = JkColor.DEFAULT_COLOR;
-    colors[i * 4] = color[0];
-    colors[i * 4 + 1] = color[1];
-    colors[i * 4 + 2] = color[2];
-    colors[i * 4 + 3] = color[3];
-  }
-
+function createGeometry(positions: Float64Array, colors: Float32Array) {
   const attributes = new GeometryAttributes();
   attributes.position = new GeometryAttribute({
     componentDatatype: ComponentDatatype.DOUBLE,

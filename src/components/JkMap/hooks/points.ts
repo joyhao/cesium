@@ -189,6 +189,28 @@ export class JkPoints extends JkBase {
     });
   }
 
+  /**
+   * 根据每个点的选中/悬停态算出 aColor 颜色数组（每点 4 个分量）。
+   * 选中橙、悬停黄、其余默认青；颜色业务全部集中在 points.ts，shape/circle 不感知。
+   */
+  private computeColors(ids: number[]): Float32Array {
+    const count = ids.length;
+    const colors = new Float32Array(count * 4);
+
+    for (let i = 0; i < count; i++) {
+      let color: number[];
+      if (this.selectedIds.has(ids[i])) color = JkColor.SELECTED_COLOR;
+      else if (this.hoverId === ids[i]) color = JkColor.HOVER_COLOR;
+      else color = JkColor.DEFAULT_COLOR;
+
+      colors[i * 4] = color[0];
+      colors[i * 4 + 1] = color[1];
+      colors[i * 4 + 2] = color[2];
+      colors[i * 4 + 3] = color[3];
+    }
+    return colors;
+  }
+
   /** 用 Worker 回传的坐标数组批量构建一个 Primitive。 */
   private replacePrimitive(
     positions: Float64Array,
@@ -201,7 +223,8 @@ export class JkPoints extends JkBase {
 
     // 视口内点位集合未变化时不重建 Primitive，避免无谓开销。
     if (!force && this.sameVisibleSet(nextIds)) return;
-    const primitive = createCircle(positions, ids);
+    const colors = this.computeColors(ids);
+    const primitive = createCircle(positions, colors);
     if (primitive) {
       this.viewer.scene.primitives.add(primitive);
     }
