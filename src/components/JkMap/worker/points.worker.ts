@@ -19,15 +19,11 @@ ctx.onmessage = (event: MessageEvent<InMessage>) => {
   }
 
   if (message.type === "filter") {
-    // 主线程发来的是弧度矩形，重建成 Cesium Rectangle 复用同一套判定逻辑。
-    const rect = Rectangle.fromRadians(
-      message.rectangle.west,
-      message.rectangle.south,
-      message.rectangle.east,
-      message.rectangle.north,
-    );
+    console.log(message);
 
-    const visible = points.filter((point) => isPointInRectangle(point, rect));
+    const visible = points.filter((point) =>
+      isPointInRectangle(point, message.rectangle),
+    );
 
     // 直接以扁平 Float64Array 输出 xyz，省去主线程再次转换。
     const positions = new Float64Array(visible.length * 3);

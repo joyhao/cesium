@@ -1,5 +1,5 @@
-import { Rectangle, Cartographic } from "@cesium/engine";
-import { PointPosition } from "./type/map.type";
+import { Cartographic } from "@cesium/engine";
+import { PointPosition, RectLike } from "./type/map.type";
 import { JkColor } from "./entity/entity";
 
 export function query(selector: string) {
@@ -21,7 +21,7 @@ export function sleep(ms: number): Promise<void> {
  * @param rectangle  相机视野范围  单位是弧度
  * @returns
  */
-export function isPointInRectangle(point: PointPosition, rectangle: Rectangle) {
+export function isPointInRectangle(point: PointPosition, rectangle: RectLike) {
   // 当前点位经纬度转换成笛卡尔坐标
   const cartographic = Cartographic.fromDegrees(
     point.longitude,
@@ -29,18 +29,24 @@ export function isPointInRectangle(point: PointPosition, rectangle: Rectangle) {
     point.height,
   );
 
+  const lon = cartographic.longitude;
+  const lat = cartographic.latitude;
+
   // 当前视口没有跨越子午线
   if (rectangle.west <= rectangle.east) {
-    return Rectangle.contains(rectangle, cartographic);
+    return (
+      lon >= rectangle.west &&
+      lon <= rectangle.east &&
+      lat >= rectangle.south &&
+      lat <= rectangle.north
+    );
   }
 
-  // 跨越子午线
-  return (
-    (cartographic.longitude >= rectangle.west ||
-      cartographic.longitude <= rectangle.east) &&
-    cartographic.latitude >= rectangle.south &&
-    cartographic.latitude <= rectangle.north
-  );
+  // 跨越子午线：经度被 ±180° 切开，落在 [west, 180] 或 [-180, east] 任一区间即算东西向命中
+  const inLonCross = lon >= rectangle.west || lon <= rectangle.east;
+  const inLat = lat >= rectangle.south && lat <= rectangle.north;
+
+  return inLonCross && inLat;
 }
 
 /**

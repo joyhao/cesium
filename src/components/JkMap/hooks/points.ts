@@ -6,7 +6,7 @@ import { JkBase } from "./base";
 
 import { CLICK_THRESHOLD } from "../entity/entity";
 import { createCircle } from "../shape/circle";
-import { computeColors, debounce } from "../utils";
+import { computeColors } from "../utils";
 
 export class JkPoints extends JkBase {
   worker = new Worker(new URL("../worker/points.worker.ts", import.meta.url), {
@@ -183,12 +183,7 @@ export class JkPoints extends JkBase {
 
     this.worker.postMessage({
       type: "filter",
-      rectangle: {
-        west: rectangle.west,
-        east: rectangle.east,
-        south: rectangle.south,
-        north: rectangle.north,
-      },
+      rectangle,
     });
   }
 
