@@ -9,6 +9,7 @@ import type {
 /** 自定义事件名称 */
 export enum cEnum {
   camera_change = "camera_change",
+  camera_start = "camera_start",
   camera_end = "camera_end",
   fps_change = "fps_change",
   points_change = "points_change",
@@ -19,6 +20,7 @@ export enum cEnum {
 /** 自定义事件名称与事件对象类型的映射 */
 export interface CEvent {
   camera_change: CustomEvent<CameraChangeDetail>;
+  camera_start: CustomEvent<{}>;
   camera_end: CustomEvent<{}>;
   fps_change: CustomEvent<CesiumInfo>;
   points_change: CustomEvent<PointsChangeDetail>;

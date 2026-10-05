@@ -18,6 +18,7 @@ export class JkCamera extends JkBase {
 
     this.disposers.push(
       this.viewer.camera.changed.addEventListener(this.update),
+      this.viewer.camera.moveStart.addEventListener(this.start),
       this.viewer.camera.moveEnd.addEventListener(this.end),
     );
   }
@@ -31,6 +32,10 @@ export class JkCamera extends JkBase {
       height: this.height,
       level: this.level,
     });
+  };
+
+  private start = () => {
+    this.emit(cEnum.camera_start, {});
   };
 
   private end = () => {

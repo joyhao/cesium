@@ -11,6 +11,8 @@ export class JkMap extends JkBase {
   points: JkPoints;
 
   private visibilityTimer?: ReturnType<typeof setTimeout>;
+  // 拖动期间实时同步的定时器句柄，moveEnd 时清除。
+  private dragSyncTimer?: number;
 
   constructor(selector: string) {
     super(selector);
@@ -21,16 +23,25 @@ export class JkMap extends JkBase {
 
     this.points = new JkPoints();
 
-    // 相机变化后延迟同步视口内点位
+    // 相机变化（缩放/飞行等）后延迟同步视口内点位
     this.camera.on("camera_change", () => {
-      console.log("-camera_change");
-
       this.points.scheduleVisibilityUpdate();
     });
 
-    // this.camera.on("camera_end", () => {
-    //   this.points.scheduleVisibilityUpdate();
-    // });
+    // 拖动地图：moveStart 起按间隔实时同步，moveEnd 停掉循环并补最后一次。
+    this.camera.on("camera_start", () => {
+      if (this.dragSyncTimer) return;
+      this.dragSyncTimer = window.setInterval(() => {
+        this.points.syncVisiblePoints();
+      }, 150);
+    });
+    this.camera.on("camera_end", () => {
+      if (this.dragSyncTimer) {
+        clearInterval(this.dragSyncTimer);
+        this.dragSyncTimer = undefined;
+      }
+      this.points.syncVisiblePoints();
+    });
   }
 
   destroy() {
@@ -41,6 +52,10 @@ export class JkMap extends JkBase {
     if (this.visibilityTimer) {
       clearTimeout(this.visibilityTimer);
       this.visibilityTimer = undefined;
+    }
+    if (this.dragSyncTimer) {
+      clearInterval(this.dragSyncTimer);
+      this.dragSyncTimer = undefined;
     }
   }
 }

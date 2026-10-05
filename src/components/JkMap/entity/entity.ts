@@ -8,7 +8,7 @@ export const viewerOptions: Viewer.ConstructorOptions = {
   baseLayerPicker: false,
   // 离线环境不要默认 Ion 世界影像（会请求 api.cesium.com 并失败），
   // 设为 false 关闭底图，地球显示纯椭球，点位照常渲染。
-  baseLayer: false,
+  baseLayer: undefined,
   fullscreenButton: false,
   geocoder: false,
   homeButton: false,
