@@ -24,22 +24,12 @@ export class JkMap extends JkBase {
     this.points = new JkPoints();
 
     // 相机变化（缩放/飞行等）后延迟同步视口内点位
-    this.camera.on("camera_change", () => {
-      this.points.scheduleVisibilityUpdate();
-    });
+    // this.camera.on("camera_change", () => {
+    //   this.points.scheduleVisibilityUpdate();
+    // });
 
-    // 拖动地图：moveStart 起按间隔实时同步，moveEnd 停掉循环并补最后一次。
-    this.camera.on("camera_start", () => {
-      if (this.dragSyncTimer) return;
-      this.dragSyncTimer = window.setInterval(() => {
-        this.points.syncVisiblePoints();
-      }, 150);
-    });
+    // 相机停止更新点位
     this.camera.on("camera_end", () => {
-      if (this.dragSyncTimer) {
-        clearInterval(this.dragSyncTimer);
-        this.dragSyncTimer = undefined;
-      }
       this.points.syncVisiblePoints();
     });
   }

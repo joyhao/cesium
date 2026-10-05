@@ -220,7 +220,6 @@ export class JkPoints extends JkBase {
 
     this.visiblePrimitive = primitive;
     this.visibleCount = positions.length / 3;
-    console.log(this.visibleCount);
 
     this.visiblePositions = positions;
     this.visiblePoints = points;
