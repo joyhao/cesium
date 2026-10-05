@@ -16,7 +16,14 @@ import {
  * 创建点位 Primitive。颜色完全由调用方决定：传入 colors（每点 4 个分量），
  * 本函数只负责把颜色写进 aColor 顶点属性，不耦合任何选中/悬停业务。
  */
-export function createCircle(positions: Float64Array, colors: Float32Array) {
+export function createCircle(
+  positions: Float64Array,
+  colors: Float32Array,
+): Primitive | undefined {
+  // 没有任何点位时不创建 Primitive，否则空几何体顶点数为 0，
+  // Cesium 建顶点缓冲区会抛 sizeInBytes > 0 的 DeveloperError。
+  if (!positions || positions.length === 0) return undefined;
+
   const appearance = new Appearance({
     vertexShaderSource: circleVertShader,
     fragmentShaderSource: circleFragShader,

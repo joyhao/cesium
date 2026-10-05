@@ -11,17 +11,17 @@ export type RectLike = {
 };
 
 // 主线程分批次追加点位，避免一次性传输全量数据。
-export type AddMessage = { type: "add"; points: PointPosition[] };
+export type AddMessage = { type: "add"; points: Point[] };
 export type FilterMessage = { type: "filter"; rectangle: RectLike };
 export type InMessage = AddMessage | FilterMessage;
 
 export type WorkerResult = {
   type: "result";
   positions: Float64Array;
-  ids: number[];
+  points: Point[];
 };
 
-export interface PointPosition {
+export interface Point {
   id: number;
   lon: number;
   lat: number;

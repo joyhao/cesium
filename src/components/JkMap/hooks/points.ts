@@ -8,7 +8,7 @@ import {
 } from "cesium";
 import { usePoints, POINT_COUNT } from "@store/points";
 import { cEnum } from "../event/event";
-import type { PointPosition, WorkerResult } from "../type/map.type";
+import type { Point, WorkerResult } from "../type/map.type";
 import { JkBase } from "./base";
 
 import { CLICK_THRESHOLD } from "../entity/entity";
@@ -23,22 +23,21 @@ export class JkPoints extends JkBase {
   viewer = JkBase.viewer;
   uPoint = usePoints();
   // 点位分帧生成，初始为空，随帧累积；totalCount 记录目标总数用于统计。
-  points: PointPosition[] = [];
+  points: Point[] = [];
   private totalCount = 0;
 
-  // 当前视口筛选出的点位，统计值以视口筛选结果为准。
+  // 当前视口筛选出的点位 id 集合，仅用于集合变化对比，避免每次重建。
   private visibleIds = new Set<number>();
   private visibleCount = 0;
   private visiblePrimitive?: Primitive;
-  // 所有点位的文字标签集合，label 取自统一后的 PointPosition.label。
+  // 所有点位的文字标签集合，label 取自统一后的 Point.label。
   private labelCollection?: LabelCollection;
   private visibilityTimer?: ReturnType<typeof setTimeout>;
 
-  // 最近一次 Worker 回传的可见点位坐标与 id，供 CPU 拾取使用。
+  // 最近一次 Worker 回传的可见点位完整对象与坐标，供渲染、拾取、标签使用。
   private visiblePositions?: Float64Array;
-  private visibleIdsList: number[] = [];
-  // 被点击选中的点位 id 集合（再次点击取消）。
-  private selectedIds = new Set<number>();
+  private visiblePoints: Point[] = [];
+
   // 当前鼠标悬停的点位 id（同一时刻最多一个，移开则为 undefined）。
   private hoverId: number | undefined = undefined;
 
@@ -73,13 +72,7 @@ export class JkPoints extends JkBase {
     const id = this.pickPoint(position);
     if (id === undefined) return;
 
-    if (this.selectedIds.has(id)) this.selectedIds.delete(id);
-    else this.selectedIds.add(id);
-
-    // 颜色变了但点位集合没变，强制重建以应用新颜色。
-    if (this.visiblePositions) {
-      this.replacePrimitive(this.visiblePositions, this.visibleIdsList, true);
-    }
+    console.log(id);
   }
 
   onMoveClick(startPosition: Cartesian2, endPosition: Cartesian2) {
@@ -91,28 +84,24 @@ export class JkPoints extends JkBase {
     }, 30);
   }
 
-  private onWorkerMessage = (event: MessageEvent<WorkerResult>) => {
-    const data = event.data;
-    if (data.type !== "result") return;
-    this.replacePrimitive(data.positions, data.ids);
-  };
-
   /** 拾取鼠标下的点位并更新 hover 状态，命中变化才重绘。 */
   private applyHover(position: Cartesian2) {
     const id = this.pickPoint(position);
     if (id === this.hoverId) return;
     this.hoverId = id;
     // 悬停在点位上显示手型光标，提示可点击；移开恢复默认。
-    if (this.viewer) {
-      this.viewer.scene.canvas.style.cursor =
-        id !== undefined ? "pointer" : "default";
-    }
+    this.viewer.scene.canvas.style.cursor =
+      id !== undefined ? "pointer" : "default";
     if (this.visiblePositions) {
-      this.replacePrimitive(this.visiblePositions, this.visibleIdsList, true);
+      this.replacePrimitive(this.visiblePositions, this.visiblePoints, true);
     }
   }
 
-  /** 把屏幕坐标反投影到可见点位，返回容差内最近的那个点 id。 */
+  /**
+   * 把屏幕坐标反投影到可见点位，返回容差内最近的那个点 id。
+   * @param position  鼠标位置
+   * @returns
+   */
   private pickPoint(position: Cartesian2): number | undefined {
     if (!this.viewer || !this.visiblePositions) return undefined;
 
@@ -120,12 +109,14 @@ export class JkPoints extends JkBase {
     let bestId: number | undefined;
     let bestDist = CLICK_THRESHOLD;
 
-    for (let i = 0; i < this.visibleIdsList.length; i++) {
+    for (let i = 0; i < this.visiblePoints.length; i++) {
       const cart = new Cartesian3(
         this.visiblePositions[i * 3],
         this.visiblePositions[i * 3 + 1],
         this.visiblePositions[i * 3 + 2],
       );
+
+      // 三维笛卡尔坐标 转换成 二维笛卡尔坐标(canvas 元素坐标)
       const screen = scene.cartesianToCanvasCoordinates(cart);
       if (!screen) continue;
 
@@ -134,7 +125,7 @@ export class JkPoints extends JkBase {
       const dist = Math.sqrt(dx * dx + dy * dy);
       if (dist <= bestDist) {
         bestDist = dist;
-        bestId = this.visibleIdsList[i];
+        bestId = this.visiblePoints[i].id;
       }
     }
 
@@ -201,20 +192,26 @@ export class JkPoints extends JkBase {
     });
   }
 
-  /** 用 Worker 回传的坐标数组批量构建一个 Primitive。 */
+  private onWorkerMessage = (event: MessageEvent<WorkerResult>) => {
+    const data = event.data;
+    if (data.type !== "result") return;
+    this.replacePrimitive(data.positions, data.points);
+  };
+
+  /** 用 Worker 回传的坐标与完整点位批量构建一个 Primitive。 */
   private replacePrimitive(
     positions: Float64Array,
-    ids: number[],
+    points: Point[],
     force = false,
   ) {
-    const nextIds = new Set(ids);
+    const nextIds = new Set(points.map((p) => p.id));
     const setChanged = !this.sameVisibleSet(nextIds);
 
     // 视口内点位集合未变化（且非强制重绘）时不重建，避免无谓开销。
     if (!force && !setChanged) return;
 
-    // 单遍遍历 ids：同时算颜色数组、按需重建标签，圆点与文字拧到一处，不再各开一个循环。
-    const colors = this.buildColorsAndLabels(positions, ids, setChanged);
+    // 单遍遍历点位：同时算颜色数组、按需重建标签，圆点与文字拧到一处。
+    const colors = this.eachList(positions, points, setChanged);
 
     const primitive = createCircle(positions, colors);
 
@@ -228,37 +225,35 @@ export class JkPoints extends JkBase {
     this.visibleIds = nextIds;
     this.visibleCount = positions.length / 3;
     this.visiblePositions = positions;
-    this.visibleIdsList = ids;
+    this.visiblePoints = points;
     this.emitChange();
   }
 
   /**
-   * 单遍遍历 ids，同时产出 aColor 颜色数组与文字标签：
+   * 单遍遍历点位，同时产出 aColor 颜色数组与文字标签：
    * - 颜色每点必算（点击/悬停改色也走这里）；
    * - 标签仅在可见集合变化时重建（rebuildLabels=true），hover/点击只改色跳过，避免抖动。
-   * 合并后每次重建只迭代 ids 一次，圆点与文字逻辑收进同一处。
+   * 合并后每次重建只迭代点位一次，圆点与文字逻辑收进同一处。
    */
-  private buildColorsAndLabels(
+  private eachList(
     positions: Float64Array,
-    ids: number[],
+    points: Point[],
     rebuildLabels: boolean,
   ): Float32Array {
-    const count = ids.length;
+    const count = points.length;
     const colors = new Float32Array(count * 4);
     if (rebuildLabels) this.labelCollection?.removeAll();
 
     for (let i = 0; i < count; i++) {
-      const id = ids[i];
-      const color = pickColor(this.selectedIds, this.hoverId, id);
+      const point = points[i];
+
+      const color = pickColor(this.hoverId, point.id);
       colors[i * 4] = color[0];
       colors[i * 4 + 1] = color[1];
       colors[i * 4 + 2] = color[2];
       colors[i * 4 + 3] = color[3];
 
       if (rebuildLabels) {
-        const point = this.points[id];
-        if (!point) continue;
-
         this.labelCollection?.add({
           position: new Cartesian3(
             positions[i * 3],
@@ -319,7 +314,7 @@ export class JkPoints extends JkBase {
     this.visibleIds.clear();
     this.visibleCount = 0;
     this.visiblePositions = undefined;
-    this.visibleIdsList = [];
+    this.visiblePoints = [];
     this.hoverId = undefined;
     this.emitChange();
   }
