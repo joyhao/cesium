@@ -26,8 +26,6 @@ export class JkPoints extends JkBase {
   points: Point[] = [];
   private totalCount = 0;
 
-  // 当前视口筛选出的点位 id 集合，仅用于集合变化对比，避免每次重建。
-  private visibleIds = new Set<number>();
   private visibleCount = 0;
   private visiblePrimitive?: Primitive;
   // 所有点位的文字标签集合，label 取自统一后的 Point.label。
@@ -204,8 +202,7 @@ export class JkPoints extends JkBase {
     points: Point[],
     force = false,
   ) {
-    const nextIds = new Set(points.map((p) => p.id));
-    const setChanged = !this.sameVisibleSet(nextIds);
+    const setChanged = !this.sameVisibleSet(points);
 
     // 视口内点位集合未变化（且非强制重绘）时不重建，避免无谓开销。
     if (!force && !setChanged) return;
@@ -222,7 +219,6 @@ export class JkPoints extends JkBase {
     this.removeVisiblePrimitive();
 
     this.visiblePrimitive = primitive;
-    this.visibleIds = nextIds;
     this.visibleCount = positions.length / 3;
     this.visiblePositions = positions;
     this.visiblePoints = points;
@@ -280,10 +276,11 @@ export class JkPoints extends JkBase {
    * @param nextIds
    * @returns
    */
-  private sameVisibleSet(nextIds: Set<number>) {
-    const sameSize = nextIds.size === this.visibleIds.size;
-    const allContained = [...nextIds].every((id) => this.visibleIds.has(id));
-    return sameSize && allContained;
+  private sameVisibleSet(nextPoints: Point[]): boolean {
+    const prev = this.visiblePoints;
+    if (nextPoints.length !== prev.length) return false;
+    const prevIds = new Set(prev.map((p) => p.id));
+    return nextPoints.every((p) => prevIds.has(p.id));
   }
 
   /** 移除并销毁上一个 Primitive；销毁中抛错忽略即可。 */
@@ -311,7 +308,6 @@ export class JkPoints extends JkBase {
     if (!this.viewer || this.viewer.isDestroyed()) return;
     this.removeVisiblePrimitive();
     this.labelCollection?.removeAll();
-    this.visibleIds.clear();
     this.visibleCount = 0;
     this.visiblePositions = undefined;
     this.visiblePoints = [];
