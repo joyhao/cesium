@@ -6,7 +6,9 @@ export const CLICK_THRESHOLD = 18;
 export const viewerOptions: Viewer.ConstructorOptions = {
   animation: false,
   baseLayerPicker: false,
-  baseLayer: undefined,
+  // 离线环境不要默认 Ion 世界影像（会请求 api.cesium.com 并失败），
+  // 设为 false 关闭底图，地球显示纯椭球，点位照常渲染。
+  baseLayer: false,
   fullscreenButton: false,
   geocoder: false,
   homeButton: false,
