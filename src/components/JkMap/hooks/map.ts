@@ -11,8 +11,6 @@ export class JkMap extends JkBase {
   points: JkPoints;
 
   private visibilityTimer?: ReturnType<typeof setTimeout>;
-  // 拖动期间实时同步的定时器句柄，moveEnd 时清除。
-  private dragSyncTimer?: number;
 
   constructor(selector: string) {
     super(selector);
@@ -42,10 +40,6 @@ export class JkMap extends JkBase {
     if (this.visibilityTimer) {
       clearTimeout(this.visibilityTimer);
       this.visibilityTimer = undefined;
-    }
-    if (this.dragSyncTimer) {
-      clearInterval(this.dragSyncTimer);
-      this.dragSyncTimer = undefined;
     }
   }
 }
