@@ -31,6 +31,8 @@ export class JkPoints extends JkBase {
   // 所有点位的文字标签集合，label 取自统一后的 Point.label。
   private labelCollection?: LabelCollection;
   private visibilityTimer?: ReturnType<typeof setTimeout>;
+  // 节流时间戳：记录上次真正执行同步的时刻，用于 leading 节流。
+  private lastVisibilitySync = 0;
 
   // 最近一次 Worker 回传的可见点位完整对象与坐标，供渲染、拾取、标签使用。
   private visiblePositions?: Float64Array;
@@ -158,14 +160,23 @@ export class JkPoints extends JkBase {
   }
 
   scheduleVisibilityUpdate = () => {
-    if (this.visibilityTimer) {
-      clearTimeout(this.visibilityTimer);
+    const interval = 150;
+    const now = performance.now();
+
+    // 距上次同步已超过间隔（或首次）：立即同步，保证拖拽中实时刷新。
+    if (now - this.lastVisibilitySync >= interval) {
+      this.lastVisibilitySync = now;
+      this.syncVisiblePoints();
+      return;
     }
 
+    // 间隔内的高频调用：只在末尾补一次（trailing），松手后必同步，避免重复执行。
+    if (this.visibilityTimer) return;
     this.visibilityTimer = setTimeout(() => {
       this.visibilityTimer = undefined;
+      this.lastVisibilitySync = performance.now();
       this.syncVisiblePoints();
-    }, 300);
+    }, interval - (now - this.lastVisibilitySync));
   };
 
   /**
@@ -220,6 +231,8 @@ export class JkPoints extends JkBase {
 
     this.visiblePrimitive = primitive;
     this.visibleCount = positions.length / 3;
+    console.log(this.visibleCount);
+
     this.visiblePositions = positions;
     this.visiblePoints = points;
     this.emitChange();
@@ -311,6 +324,7 @@ export class JkPoints extends JkBase {
     this.visibleCount = 0;
     this.visiblePositions = undefined;
     this.visiblePoints = [];
+    this.lastVisibilitySync = 0;
     this.hoverId = undefined;
     this.emitChange();
   }
