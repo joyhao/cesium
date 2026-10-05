@@ -1,4 +1,4 @@
-import { Cartesian3, Rectangle } from "@cesium/engine";
+import { Cartesian3 } from "@cesium/engine";
 import { isInRect } from "../utils";
 import type { InMessage, Point } from "../type/map.type";
 
@@ -24,7 +24,7 @@ ctx.onmessage = (event: MessageEvent<InMessage>) => {
 
     // 直接以扁平 Float64Array 输出 xyz，省去主线程再次转换。
     const positions = new Float64Array(visible.length * 3);
-    const points = new Array<Point>(visible.length);
+    const points = [];
 
     for (let i = 0; i < visible.length; i++) {
       const point = visible[i];
