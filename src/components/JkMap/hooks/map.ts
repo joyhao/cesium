@@ -1,5 +1,4 @@
 import { JkBase } from "./base";
-import { query } from "../utils";
 import { JkLayer } from "./layer";
 import { JkFly } from "./fly";
 import { JkCamera } from "./camera";
@@ -24,6 +23,8 @@ export class JkMap extends JkBase {
 
     // 相机变化后延迟同步视口内点位
     this.camera.on("camera_change", () => {
+      console.log("-camera_change");
+
       this.points.scheduleVisibilityUpdate();
     });
 
