@@ -117,3 +117,23 @@ export function loadModel(
     );
   });
 }
+
+/**
+ * 设置相机绕 target 的默认方位角（水平旋转角 theta），保持距离与高度不变。
+ * @param camera 透视相机
+ * @param target 注视点
+ * @param deg 方位角（度），例如 -90
+ */
+export function setCameraAzimuth(
+  camera: THREE.PerspectiveCamera,
+  target: THREE.Vector3,
+  deg: number,
+): void {
+  const spherical = new THREE.Spherical().setFromVector3(
+    camera.position.clone().sub(target),
+  );
+  spherical.theta = THREE.MathUtils.degToRad(deg);
+  camera.position
+    .copy(target)
+    .add(new THREE.Vector3().setFromSpherical(spherical));
+}

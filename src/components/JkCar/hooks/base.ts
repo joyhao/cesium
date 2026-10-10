@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import Stats from "three/examples/jsm/libs/stats.module.js";
-import { query } from "@/utils/utils";
+import { query, setCameraAzimuth } from "@/utils/utils";
 
 export class JkCarBase {
   protected canvas!: HTMLElement;
@@ -12,6 +12,7 @@ export class JkCarBase {
   protected camera: THREE.PerspectiveCamera;
   protected controls: OrbitControls;
   protected stats: Stats;
+  protected camInfo!: HTMLElement;
   protected clock = new THREE.Clock();
   protected frameId = 0;
   width: number;
@@ -52,6 +53,10 @@ export class JkCarBase {
     this.controls.enableDamping = true;
     this.controls.target.set(0, 0.5, 0);
 
+    // 默认视角方位角 -90°
+    setCameraAzimuth(this.camera, this.controls.target, 270);
+    this.controls.update();
+
     // 灯光
     this.scene.add(new THREE.AmbientLight(0xffffff, 0.6));
     const dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
@@ -71,6 +76,11 @@ export class JkCarBase {
     this.stats.dom.classList.add("jk-fps");
     this.parent.appendChild(this.stats.dom);
 
+    // 摄像机旋转角度信息
+    this.camInfo = document.createElement("div");
+    this.camInfo.className = "jk-cam-info";
+    this.parent.appendChild(this.camInfo);
+
     window.addEventListener("resize", this.onResize);
     this.animate();
   }
@@ -89,6 +99,11 @@ export class JkCarBase {
     this.update(delta);
     this.controls.update();
     this.stats.update();
+
+    // 实时更新旋转角度：方位角(绕Y)
+    const azimuth = THREE.MathUtils.radToDeg(this.controls.getAzimuthalAngle());
+    this.camInfo.textContent = `方位角 ${azimuth.toFixed(1)}°`;
+
     this.renderer.render(this.scene, this.camera);
   };
 
@@ -101,6 +116,7 @@ export class JkCarBase {
     window.removeEventListener("resize", this.onResize);
     this.controls.dispose();
     this.stats.dom.remove();
+    this.camInfo.remove();
     this.renderer.dispose();
   }
 }
