@@ -2,8 +2,14 @@
 export const routes = [
   {
     path: "/",
-    redirect: "/map",
+    redirect: "/three-car",
     meta: { hidden: true },
+  },
+  {
+    path: "/three-car",
+    name: "threeCar",
+    component: () => import("../views/ThreeCar/ThreeCar.vue"),
+    meta: { title: "ThreeCar", icon: "🚗" },
   },
   {
     path: "/map",
