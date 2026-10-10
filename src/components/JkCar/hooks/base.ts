@@ -2,7 +2,7 @@ import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { HDRLoader } from "three/addons/loaders/HDRLoader.js";
 import Stats from "three/addons/libs/stats.module.js";
-import { query, setCamera } from "@/utils/utils";
+import { query, setCameraDegree } from "@/utils/utils";
 
 export class JkCarBase {
   protected canvas!: HTMLElement;
@@ -54,7 +54,7 @@ export class JkCarBase {
     this.controls.enableDamping = true;
 
     // 修改方位角
-    setCamera(this.camera, this.controls.target, 270);
+    setCameraDegree(this.camera, this.controls.target, 270);
 
     // 灯光：用 HDR 作为基于图像的环境光（IBL），替换普通环境光
     new HDRLoader().load("/hdr/suburban_garden_4k.hdr", (texture) => {
