@@ -1,6 +1,6 @@
 import { defineStore } from "pinia";
 import type { Point } from "@com/JkMap/type/map.type";
-import { randomBetween } from "@/components/JkMap/utils";
+import { randomBetween } from "@/utils/utils";
 
 // 全局点位总数：点位数据全部保存在 Store 中，但只把视口内的点创建为 Cesium Entity。
 export const POINT_COUNT = 10_000;

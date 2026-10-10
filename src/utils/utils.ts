@@ -1,6 +1,6 @@
 import { Cartographic } from "@cesium/engine";
-import { Point, RectLike } from "./type/map.type";
-import { JkColor } from "./entity/entity";
+import { Point, RectLike } from "../components/JkMap/type/map.type";
+import { JkColor } from "../components/JkMap/entity/entity";
 
 export function query(selector: string) {
   return document.querySelector(selector) as HTMLElement;

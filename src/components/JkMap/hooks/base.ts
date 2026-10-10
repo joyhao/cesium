@@ -1,7 +1,7 @@
 import { cEnum, CEvent } from "../event/event";
 import { ScreenSpaceEventHandler, ScreenSpaceEventType, Viewer } from "cesium";
 import { viewerOptions } from "../entity/entity";
-import { query } from "../utils";
+import { query } from "../../../utils/utils";
 import { DetailOf, MovePosition, Position } from "../type/map.type";
 
 export class JkBase {

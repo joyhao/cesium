@@ -1,5 +1,5 @@
 import { Cartesian3 } from "@cesium/engine";
-import { isInRect } from "../utils";
+import { isInRect } from "../../../utils/utils";
 import type { InMessage, Point } from "../type/map.type";
 
 // Worker 内累积主线程分批下发的点位，后续仅按视口矩形筛选。
