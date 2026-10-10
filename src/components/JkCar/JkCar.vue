@@ -6,9 +6,17 @@
   </article>
 </template>
 <script setup lang="ts">
+import { onBeforeUnmount, onMounted } from "vue";
 import { JkCar } from "./hooks/Car";
 
+let car: JkCar | null = null;
+
 onMounted(() => {
-  new JkCar(".car");
+  car = new JkCar(".car");
+});
+
+onBeforeUnmount(() => {
+  car?.dispose();
+  car = null;
 });
 </script>
