@@ -1,3 +1,5 @@
+import * as THREE from "three";
+import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { Cartographic } from "@cesium/engine";
 import { Point, RectLike } from "../components/JkMap/type/map.type";
 import { JkColor } from "../components/JkMap/entity/entity";
@@ -77,4 +79,41 @@ export function computeColors(
     colors[i * 4 + 3] = color[3];
   }
   return colors;
+}
+
+/**
+ * 加载 GLB/GLTF 模型并归一化后加入场景：居中对齐到原点、底部落到地面、整体缩放到 targetSize。
+ * @param url 模型地址（public 下用根路径，如 /glb/car.glb）
+ * @param scene 目标场景
+ * @param targetSize 归一化后的最大边长，默认 4
+ * @returns 加载完成的模型对象
+ */
+export function loadModel(
+  url: string,
+  scene: THREE.Scene,
+  targetSize = 4,
+): Promise<THREE.Object3D> {
+  return new Promise((resolve, reject) => {
+    new GLTFLoader().load(
+      url,
+      (gltf) => {
+        const model = gltf.scene;
+        const box = new THREE.Box3().setFromObject(model);
+        const size = box.getSize(new THREE.Vector3());
+        const center = box.getCenter(new THREE.Vector3());
+        const maxDim = Math.max(size.x, size.y, size.z) || 1;
+        const scale = targetSize / maxDim;
+        model.scale.setScalar(scale);
+        model.position.set(
+          -center.x * scale,
+          -box.min.y * scale,
+          -center.z * scale,
+        );
+        scene.add(model);
+        resolve(model);
+      },
+      undefined,
+      (error) => reject(error),
+    );
+  });
 }
