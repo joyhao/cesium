@@ -124,7 +124,7 @@ export function loadModel(
  * @param target 注视点
  * @param deg 方位角（度），例如 -90
  */
-export function setCameraAzimuth(
+export function setCamera(
   camera: THREE.PerspectiveCamera,
   target: THREE.Vector3,
   deg: number,

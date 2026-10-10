@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import Stats from "three/examples/jsm/libs/stats.module.js";
-import { query, setCameraAzimuth } from "@/utils/utils";
+import { query, setCamera } from "@/utils/utils";
 
 export class JkCarBase {
   protected canvas!: HTMLElement;
@@ -53,8 +53,8 @@ export class JkCarBase {
     this.controls.enableDamping = true;
     this.controls.target.set(0, 0.5, 0);
 
-    // 默认视角方位角 -90°
-    setCameraAzimuth(this.camera, this.controls.target, 270);
+    // 修改方位角 -90°
+    setCamera(this.camera, this.controls.target, 270);
     this.controls.update();
 
     // 灯光
