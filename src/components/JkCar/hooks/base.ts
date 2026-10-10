@@ -1,19 +1,19 @@
 import * as THREE from "three";
-import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
-import Stats from "three/examples/jsm/libs/stats.module.js";
+import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+import { HDRLoader } from "three/addons/loaders/HDRLoader.js";
+import Stats from "three/addons/libs/stats.module.js";
 import { query, setCamera } from "@/utils/utils";
 
 export class JkCarBase {
   protected canvas!: HTMLElement;
   protected parent: HTMLElement;
-
   protected renderer: THREE.WebGLRenderer;
   protected scene: THREE.Scene;
   protected camera: THREE.PerspectiveCamera;
   protected controls: OrbitControls;
   protected stats: Stats;
   protected camInfo!: HTMLElement;
-  protected clock = new THREE.Clock();
+  protected last = performance.now();
   protected frameId = 0;
   width: number;
   height: number;
@@ -28,7 +28,6 @@ export class JkCarBase {
 
     // 场景与背景
     this.scene = new THREE.Scene();
-    this.scene.background = new THREE.Color(0x0f1420);
 
     // 相机
     this.camera = new THREE.PerspectiveCamera(
@@ -47,18 +46,23 @@ export class JkCarBase {
     });
     this.renderer.setSize(this.width, this.height);
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    this.renderer.toneMappingExposure = 1;
 
     // 鼠标交互
     this.controls = new OrbitControls(this.camera, this.renderer.domElement);
     this.controls.enableDamping = true;
-    this.controls.target.set(0, 0.5, 0);
 
-    // 修改方位角 -90°
+    // 修改方位角
     setCamera(this.camera, this.controls.target, 270);
-    this.controls.update();
 
-    // 灯光
-    this.scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+    // 灯光：用 HDR 作为基于图像的环境光（IBL），替换普通环境光
+    new HDRLoader().load("/hdr/suburban_garden_4k.hdr", (texture) => {
+      texture.mapping = THREE.EquirectangularReflectionMapping;
+      this.scene.environment = texture;
+    });
+
+    // 主光源，增强车身高光与立体感
     const dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
     dirLight.position.set(5, 10, 7);
     this.scene.add(dirLight);
@@ -95,13 +99,16 @@ export class JkCarBase {
 
   protected animate = () => {
     this.frameId = requestAnimationFrame(this.animate);
-    const delta = this.clock.getDelta();
+    const now = performance.now();
+    const delta = (now - this.last) / 1000;
+    this.last = now;
     this.update(delta);
     this.controls.update();
     this.stats.update();
 
-    // 实时更新旋转角度：方位角(绕Y)
-    const azimuth = THREE.MathUtils.radToDeg(this.controls.getAzimuthalAngle());
+    // 实时更新旋转角度：方位角(绕Y)，规范到 [0°,360°) 与 setCamera 输入一致
+    let azimuth = THREE.MathUtils.radToDeg(this.controls.getAzimuthalAngle());
+    if (azimuth < 0) azimuth += 360;
     this.camInfo.textContent = `方位角 ${azimuth.toFixed(1)}°`;
 
     this.renderer.render(this.scene, this.camera);

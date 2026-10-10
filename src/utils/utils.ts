@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
+import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { Cartographic } from "@cesium/engine";
 import { Point, RectLike } from "../components/JkMap/type/map.type";
 import { JkColor } from "../components/JkMap/entity/entity";
