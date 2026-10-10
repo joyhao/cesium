@@ -7,11 +7,11 @@ export class JkCarBase {
   protected canvas!: HTMLElement;
   protected parent: HTMLElement;
 
-  protected renderer!: THREE.WebGLRenderer;
-  protected scene!: THREE.Scene;
-  protected camera!: THREE.PerspectiveCamera;
-  protected controls!: OrbitControls;
-  protected stats!: Stats;
+  protected renderer: THREE.WebGLRenderer;
+  protected scene: THREE.Scene;
+  protected camera: THREE.PerspectiveCamera;
+  protected controls: OrbitControls;
+  protected stats: Stats;
   protected clock = new THREE.Clock();
   protected frameId = 0;
 
@@ -20,10 +20,6 @@ export class JkCarBase {
       this.canvas = query(selector);
     }
     this.parent = this.canvas.parentElement as HTMLElement;
-    this.init();
-  }
-
-  protected init() {
     const width = this.parent.clientWidth;
     const height = this.parent.clientHeight;
 
