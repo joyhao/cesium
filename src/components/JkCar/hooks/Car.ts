@@ -1,8 +1,7 @@
-import { query } from "@/utils/utils";
+import { JkCarBase } from "./base";
 
-export class JkCar {
-  canvas: HTMLElement;
+export class JkCar extends JkCarBase {
   constructor(selector: string) {
-    this.canvas = query(selector);
+    super(selector);
   }
 }

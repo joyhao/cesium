@@ -1,6 +1,8 @@
 <style lang="scss" scoped src="./index.scss"></style>
 <template>
-  <JkCar></JkCar>
+  <article class="three-car">
+    <JkCar></JkCar>
+  </article>
 </template>
 
 <script setup lang="ts"></script>
