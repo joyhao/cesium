@@ -46,7 +46,9 @@ export class JkCarBase {
     });
     this.renderer.setSize(this.width, this.height);
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    // 色调映射：ACES 电影级曲线，把 HDR 高动态范围（亮部 > 1）平滑压缩到屏幕可显示范围，避免过曝、保留明暗细节
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    // 曝光度：整体亮度倍率，1 为原始亮度，调大变亮、调小变暗
     this.renderer.toneMappingExposure = 1;
 
     // 鼠标交互
