@@ -28,6 +28,8 @@ export class JkCarBase {
 
     // 场景与背景
     this.scene = new THREE.Scene();
+    // 纯色背景，避免默认黑色（HDR 仅用于光照，不作背景）
+    this.scene.background = new THREE.Color(0x1a1a1a);
 
     // 相机
     this.camera = new THREE.PerspectiveCamera(
