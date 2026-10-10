@@ -4,7 +4,8 @@ import Stats from "three/examples/jsm/libs/stats.module.js";
 import { query } from "@/utils/utils";
 
 export class JkCarBase {
-  static canvas: HTMLElement;
+  protected canvas!: HTMLElement;
+  protected parent: HTMLElement;
 
   protected renderer!: THREE.WebGLRenderer;
   protected scene!: THREE.Scene;
@@ -16,16 +17,15 @@ export class JkCarBase {
 
   constructor(selector?: string) {
     if (selector) {
-      JkCarBase.canvas = query(selector);
+      this.canvas = query(selector);
     }
+    this.parent = this.canvas.parentElement as HTMLElement;
     this.init();
   }
 
   protected init() {
-    const canvas = JkCarBase.canvas as HTMLCanvasElement;
-    const parent = canvas.parentElement!;
-    const width = parent.clientWidth || 1;
-    const height = parent.clientHeight || 1;
+    const width = this.parent.clientWidth;
+    const height = this.parent.clientHeight;
 
     // 场景与背景
     this.scene = new THREE.Scene();
@@ -37,7 +37,10 @@ export class JkCarBase {
     this.camera.lookAt(0, 0, 0);
 
     // 渲染器
-    this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+    this.renderer = new THREE.WebGLRenderer({
+      canvas: this.canvas,
+      antialias: true,
+    });
     this.renderer.setSize(width, height);
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 
@@ -60,25 +63,18 @@ export class JkCarBase {
     grid.position.y = -0.01;
     this.scene.add(grid);
 
-    // FPS 面板
+    // FPS 面板：用 class 控制样式，清掉库自带的内联 position 以免覆盖 class
     this.stats = new Stats();
-    this.stats.dom.style.position = "absolute";
-    this.stats.dom.style.left = "auto";
-    this.stats.dom.style.right = "8px";
-    this.stats.dom.style.top = "8px";
-    this.stats.dom.style.zIndex = "10";
-    parent.style.position = parent.style.position || "relative";
-    parent.appendChild(this.stats.dom);
+    this.stats.dom.classList.add("jk-fps");
+    this.parent.appendChild(this.stats.dom);
 
     window.addEventListener("resize", this.onResize);
     this.animate();
   }
 
   protected onResize = () => {
-    const canvas = JkCarBase.canvas as HTMLCanvasElement;
-    const parent = canvas.parentElement!;
-    const width = parent.clientWidth || 1;
-    const height = parent.clientHeight || 1;
+    const width = this.parent.clientWidth;
+    const height = this.parent.clientHeight;
     this.camera.aspect = width / height;
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(width, height);

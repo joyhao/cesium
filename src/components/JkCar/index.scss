@@ -1,8 +1,19 @@
 .jk-car {
+  position: relative;
   width: 100%;
   height: 100%;
   canvas {
     width: 100%;
     height: 100%;
+  }
+
+  // FPS 面板（three Stats 动态生成，用 :deep 穿透 scoped）
+  :deep(.jk-fps) {
+    position: absolute !important;
+    top: 8px !important;
+    right: 8px !important;
+    left: auto !important;
+    z-index: 10 !important;
+    opacity: 0.9 !important;
   }
 }
