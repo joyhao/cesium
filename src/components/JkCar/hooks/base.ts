@@ -14,21 +14,28 @@ export class JkCarBase {
   protected stats: Stats;
   protected clock = new THREE.Clock();
   protected frameId = 0;
+  width: number;
+  height: number;
 
   constructor(selector?: string) {
     if (selector) {
       this.canvas = query(selector);
     }
     this.parent = this.canvas.parentElement as HTMLElement;
-    const width = this.parent.clientWidth;
-    const height = this.parent.clientHeight;
+    this.width = this.parent.clientWidth;
+    this.height = this.parent.clientHeight;
 
     // 场景与背景
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color(0x0f1420);
 
     // 相机
-    this.camera = new THREE.PerspectiveCamera(50, width / height, 0.1, 1000);
+    this.camera = new THREE.PerspectiveCamera(
+      50,
+      this.width / this.height,
+      0.1,
+      1000,
+    );
     this.camera.position.set(6, 4, 6);
     this.camera.lookAt(0, 0, 0);
 
@@ -37,7 +44,7 @@ export class JkCarBase {
       canvas: this.canvas,
       antialias: true,
     });
-    this.renderer.setSize(width, height);
+    this.renderer.setSize(this.width, this.height);
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 
     // 鼠标交互
@@ -69,11 +76,11 @@ export class JkCarBase {
   }
 
   protected onResize = () => {
-    const width = this.parent.clientWidth;
-    const height = this.parent.clientHeight;
-    this.camera.aspect = width / height;
+    this.width = this.parent.clientWidth;
+    this.height = this.parent.clientHeight;
+    this.camera.aspect = this.width / this.height;
     this.camera.updateProjectionMatrix();
-    this.renderer.setSize(width, height);
+    this.renderer.setSize(this.width, this.height);
   };
 
   protected animate = () => {
