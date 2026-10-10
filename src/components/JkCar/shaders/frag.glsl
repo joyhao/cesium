@@ -10,10 +10,9 @@ uniform float uTime;
 varying vec3 vNormal;
 varying vec3 vViewPosition;
 varying float vT;
-varying float vLen;
 
 void main() {
-  // 底→顶渐变作为底色
+  // 底→顶渐变作为底色；
   vec3 grad = mix(uColorBottom, uColorTop, vT);
 
   // Fresnel 边缘光：视线与法线越垂直（越靠边缘）越强，并随时间呼吸脉动
@@ -27,11 +26,7 @@ void main() {
   float band = smoothstep(0.08, 0.0, abs(fract(vT - uTime * 0.25) - 0.5));
   vec3 scan = vec3(0.6, 0.9, 1.0) * band * 0.8;
 
-  // 车头→车尾扫过的亮带（动画）：沿车长方向 vLen 移动，用暖色区分
-  float bandLen = smoothstep(0.08, 0.0, abs(fract(vLen - uTime * 0.25) - 0.5));
-  vec3 scanLen = vec3(1.0, 0.7, 0.3) * bandLen * 0.8;
-
   // 渐变底色 + 边缘光 + 两条扫描亮带；配合 MultiplyBlending 把白模染成渐变并保留原光照
-  vec3 color = grad + add1 + scan + scanLen;
+  vec3 color = grad + add1 + scan;
   gl_FragColor = vec4(color, 1.0);
 }

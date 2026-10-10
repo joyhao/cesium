@@ -51,10 +51,7 @@ export class JkCar extends JkCarBase {
         // 渐变归一化范围：模型世界包围盒的上下边界 Y
         uMinY: { value: box.min.y },
         uMaxY: { value: box.max.y },
-        // 车长轴：取水平方向（X/Z）中较长者作为车长，沿它做车头→车尾扫描
-        uUseX: { value: box.max.x - box.min.x >= box.max.z - box.min.z ? 1.0 : 0.0 },
-        uMinLen: { value: box.max.x - box.min.x >= box.max.z - box.min.z ? box.min.x : box.min.z },
-        uMaxLen: { value: box.max.x - box.min.x >= box.max.z - box.min.z ? box.max.x : box.max.z },
+
         // 动画时间（秒），每帧累加
         uTime: { value: 0 },
       },
