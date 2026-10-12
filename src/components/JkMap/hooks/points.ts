@@ -13,6 +13,7 @@ import { JkBase } from "./base";
 
 import { CLICK_THRESHOLD } from "../entity/entity";
 import { createCircle } from "../shape/circle";
+import { PolylineBuilder } from "../shape/polyline";
 import { pickColor } from "../../../utils/utils";
 
 export class JkPoints extends JkBase {
@@ -40,6 +41,8 @@ export class JkPoints extends JkBase {
   private hoverId: number | undefined = undefined;
 
   private hoverTimer?: ReturnType<typeof setTimeout>;
+  private lineBuilder = new PolylineBuilder();
+  private linePrimitive?: Primitive;
 
   constructor() {
     super();
@@ -64,13 +67,54 @@ export class JkPoints extends JkBase {
       const { startPosition, endPosition } = event.detail;
       this.onMoveClick(startPosition, endPosition);
     });
+
+    this.on("on_right_click", () => this.finishLine());
   }
 
   onLeftClick(position: Cartesian2) {
+    console.log(position);
+
     const id = this.pickPoint(position);
-    if (id === undefined) return;
+    if (id === undefined) {
+      const scene = this.viewer.scene;
+      const mapPosition =
+        (scene.pickPositionSupported
+          ? scene.pickPosition(position)
+          : undefined) ??
+        this.viewer.camera.pickEllipsoid(position, scene.globe.ellipsoid);
+
+      if (!mapPosition) return;
+
+      this.lineBuilder.addPoint(mapPosition);
+      this.redrawLine();
+      return;
+    }
 
     console.log(id);
+  }
+
+  private redrawLine() {
+    if (this.linePrimitive) {
+      this.viewer.scene.primitives.remove(this.linePrimitive);
+      this.linePrimitive = undefined;
+    }
+
+    const primitive = this.lineBuilder.toPrimitive();
+    if (primitive) {
+      this.viewer.scene.primitives.add(primitive);
+      this.linePrimitive = primitive;
+    }
+  }
+
+  private finishLine() {
+    // 只有一个点、尚未形成线段时，移除未成形的 Primitive。
+    if (this.linePrimitive && this.lineBuilder.segmentCount < 1) {
+      this.viewer.scene.primitives.remove(this.linePrimitive);
+    }
+
+    // 清空当前绘制状态以开始新一条线；已 add 到场景的旧 Primitive 会保留。
+    this.lineBuilder.reset();
+    this.linePrimitive = undefined;
   }
 
   onMoveClick(startPosition: Cartesian2, endPosition: Cartesian2) {

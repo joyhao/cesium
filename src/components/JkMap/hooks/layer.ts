@@ -27,5 +27,9 @@ export class JkLayer extends JkBase {
       credit: "天地图注记",
       maximumLevel: 18,
     });
+
+    // 关键修复：把影像真正叠加到地图上，否则椭球无底图、看起来像空白扁平的 2D 圆盘。
+    this.viewer.imageryLayers.addImageryProvider(baseProvider);
+    this.viewer.imageryLayers.addImageryProvider(annotationProvider);
   }
 }

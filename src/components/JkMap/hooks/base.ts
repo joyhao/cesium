@@ -37,11 +37,19 @@ export class JkBase {
       this.handleMouseMove,
       ScreenSpaceEventType.MOUSE_MOVE,
     );
+    this.handler.setInputAction(
+      this.handleRightClick,
+      ScreenSpaceEventType.RIGHT_CLICK,
+    );
   }
 
   private handleLeftClick = (movement: Position) => {
     const { position } = movement;
     this.emit(cEnum.on_left_click, { position });
+  };
+
+  private handleRightClick = () => {
+    this.emit(cEnum.on_right_click, {});
   };
 
   private handleMouseMove = (movement: MovePosition) => {

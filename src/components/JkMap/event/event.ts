@@ -14,6 +14,7 @@ export enum cEnum {
   fps_change = "fps_change",
   points_change = "points_change",
   on_left_click = "on_left_click",
+  on_right_click = "on_right_click",
   on_move_click = "on_move_click",
 }
 
@@ -25,5 +26,6 @@ export interface CEvent {
   fps_change: CustomEvent<CesiumInfo>;
   points_change: CustomEvent<PointsChangeDetail>;
   on_left_click: CustomEvent<Position>;
+  on_right_click: CustomEvent<{}>;
   on_move_click: CustomEvent<MovePosition>;
 }
