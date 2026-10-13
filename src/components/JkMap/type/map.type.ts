@@ -28,6 +28,20 @@ export interface Point {
   height: number;
   label: string;
 }
+
+export interface LineVertex {
+  lon: number;
+  lat: number;
+  height: number;
+}
+
+// 单条线段数据：含唯一 id、名称与有序顶点列表。
+export interface LineData {
+  id: number;
+  name: string;
+  points: LineVertex[];
+}
+
 export interface Position {
   position: Cartesian2;
 }
@@ -65,4 +79,14 @@ export interface CesiumInfo {
 
 export interface DrawingChangeDetail {
   drawing: boolean;
+}
+
+export interface LineInfo {
+  id: number;
+  name: string;
+  count: number;
+}
+
+export interface LineChangeDetail {
+  lines: LineInfo[];
 }

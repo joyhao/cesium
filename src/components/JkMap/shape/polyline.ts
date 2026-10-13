@@ -130,6 +130,11 @@ export class PolylineBuilder {
     return this.segs;
   }
 
+  /** 返回当前控制点的副本，供外部记录 / 回显已绘制线段。 */
+  getPositions(): Cartesian3[] {
+    return this.positions.slice();
+  }
+
   addPoint(position: Cartesian3): void {
     this.positions.push(position);
   }

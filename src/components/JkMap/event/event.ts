@@ -2,6 +2,7 @@ import type {
   CameraChangeDetail,
   CesiumInfo,
   DrawingChangeDetail,
+  LineChangeDetail,
   Position,
   PointsChangeDetail,
   MovePosition,
@@ -18,6 +19,7 @@ export enum cEnum {
   on_right_click = "on_right_click",
   on_move_click = "on_move_click",
   drawing_change = "drawing_change",
+  line_change = "line_change",
 }
 
 /** 自定义事件名称与事件对象类型的映射 */
@@ -31,4 +33,5 @@ export interface CEvent {
   on_right_click: CustomEvent<{}>;
   on_move_click: CustomEvent<MovePosition>;
   drawing_change: CustomEvent<DrawingChangeDetail>;
+  line_change: CustomEvent<LineChangeDetail>;
 }

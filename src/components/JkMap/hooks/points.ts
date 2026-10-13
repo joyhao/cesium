@@ -13,8 +13,8 @@ import { JkBase } from "./base";
 
 import { CLICK_THRESHOLD } from "../entity/entity";
 import { createCircle } from "../shape/circle";
-import { PolylineBuilder } from "../shape/polyline";
 import { pickColor } from "../../../utils/utils";
+import { JkLines } from "./lines";
 
 export class JkPoints extends JkBase {
   worker = new Worker(new URL("../worker/points.worker.ts", import.meta.url), {
@@ -41,11 +41,9 @@ export class JkPoints extends JkBase {
   private hoverId: number | undefined = undefined;
 
   private hoverTimer?: ReturnType<typeof setTimeout>;
-  private lineBuilder = new PolylineBuilder();
-  private linePrimitive?: Primitive;
 
-  // 连线模式开关：true=左键追加折线顶点、右键结束；false=普通拾取模式
-  isLine = false;
+  // 线段绘制与回显模块（从 points 抽取）
+  private lines = new JkLines();
 
   constructor() {
     super();
@@ -70,24 +68,11 @@ export class JkPoints extends JkBase {
       const { startPosition, endPosition } = event.detail;
       this.onMoveClick(startPosition, endPosition);
     });
-
-    this.on("on_right_click", () => this.finishLine());
   }
 
   onLeftClick(position: Cartesian2) {
-    // 连线模式：左键在地图坐标处追加折线顶点。
-    if (this.isLine) {
-      const scene = this.viewer.scene;
-      const mapPosition =
-        (scene.pickPositionSupported
-          ? scene.pickPosition(position)
-          : undefined) ??
-        this.viewer.camera.pickEllipsoid(position, scene.globe.ellipsoid);
-      if (!mapPosition) return;
-      this.lineBuilder.addPoint(mapPosition);
-      this.redrawLine();
-      return;
-    }
+    // 连线模式下左键由 JkLines 自行处理（加点），此处直接跳过避免重复。
+    if (this.lines.isLine) return;
 
     // 普通模式：仅做点位拾取，命中则打印 id。
     const id = this.pickPoint(position);
@@ -96,37 +81,19 @@ export class JkPoints extends JkBase {
     }
   }
 
-  private redrawLine() {
-    if (this.linePrimitive) {
-      this.viewer.scene.primitives.remove(this.linePrimitive);
-      this.linePrimitive = undefined;
-    }
-
-    const primitive = this.lineBuilder.toPrimitive();
-    if (primitive) {
-      this.viewer.scene.primitives.add(primitive);
-      this.linePrimitive = primitive;
-    }
-  }
-
-  private finishLine() {
-    // 仅连线模式下右键才结束当前线，否则忽略。
-    if (!this.isLine) return;
-    // 只有一个点、尚未形成线段时，移除未成形的 Primitive。
-    if (this.linePrimitive && this.lineBuilder.segmentCount < 1) {
-      this.viewer.scene.primitives.remove(this.linePrimitive);
-    }
-
-    // 清空当前绘制状态以开始新一条线；已 add 到场景的旧 Primitive 会保留。
-    this.lineBuilder.reset();
-    this.linePrimitive = undefined;
-  }
-
-  /** 切换连线模式并同步光标，返回切换后的状态供 UI 同步。 */
+  /** 切换连线模式（委托线段模块），返回切换后的状态供 UI 同步。 */
   toggleLine(): boolean {
-    this.isLine = !this.isLine;
-    this.viewer.scene.canvas.style.cursor = this.isLine ? "crosshair" : "default";
-    return this.isLine;
+    return this.lines.toggleLine();
+  }
+
+  /** 定位并高亮指定线段（委托线段模块）。 */
+  focusLine(id: number) {
+    this.lines.focusLine(id);
+  }
+
+  /** 删除指定线段（委托线段模块）。 */
+  removeLine(id: number) {
+    this.lines.removeLine(id);
   }
 
   onMoveClick(startPosition: Cartesian2, endPosition: Cartesian2) {
@@ -144,7 +111,7 @@ export class JkPoints extends JkBase {
     if (id === this.hoverId) return;
     this.hoverId = id;
     // 连线模式下保持十字光标，不覆盖绘制态；否则按是否命中点位切换手型。
-    if (!this.isLine) {
+    if (!this.lines.isLine) {
       this.viewer.scene.canvas.style.cursor =
         id !== undefined ? "pointer" : "default";
     }
@@ -385,6 +352,9 @@ export class JkPoints extends JkBase {
     }
 
     this.worker.terminate();
+
+    // 清理线段模块资源（不销毁共享 Viewer）
+    this.lines.destroy();
 
     if (this.labelCollection && !this.viewer.isDestroyed()) {
       this.viewer.scene.primitives.remove(this.labelCollection);
