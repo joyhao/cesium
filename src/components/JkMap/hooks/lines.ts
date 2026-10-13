@@ -36,7 +36,6 @@ export class JkLines extends JkBase {
     super(undefined, bus);
 
     this.on("on_left_click", (event) => {
-      
       const { position } = event.detail;
 
       this.onLeftClick(event, position);
