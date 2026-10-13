@@ -62,3 +62,7 @@ export interface PointsChangeDetail {
 export interface CesiumInfo {
   fps: number;
 }
+
+export interface DrawingChangeDetail {
+  drawing: boolean;
+}

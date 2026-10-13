@@ -20,3 +20,48 @@
   pointer-events: none;
   backdrop-filter: blur(8px);
 }
+
+.container.drawing {
+  cursor: crosshair;
+}
+
+.toolbar {
+  position: absolute;
+  z-index: 1;
+  top: 16px;
+  left: 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.tool-btn {
+  padding: 8px 14px;
+  border: 1px solid rgba(126, 191, 230, 0.4);
+  border-radius: 8px;
+  background: rgba(5, 14, 25, 0.82);
+  color: #d7e9f8;
+  font-size: 13px;
+  cursor: pointer;
+  backdrop-filter: blur(8px);
+  transition: all 0.2s ease;
+}
+
+.tool-btn:hover {
+  border-color: rgba(126, 191, 230, 0.8);
+}
+
+.tool-btn.active {
+  background: rgba(78, 161, 255, 0.22);
+  border-color: #4ea1ff;
+  color: #ffffff;
+}
+
+.tool-hint {
+  padding: 6px 10px;
+  border-radius: 6px;
+  background: rgba(5, 14, 25, 0.82);
+  color: #9fc6e8;
+  font-size: 12px;
+  backdrop-filter: blur(8px);
+}

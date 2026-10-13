@@ -14,10 +14,10 @@
   "dependencies": {
     "@types/three": "^0.186.0",
     "cesium": "^1.145.0",
-    "pinia": "^2.1.7",
+    "pinia": "2.2.1",
     "three": "^0.186.1",
     "vue": "3.3.13",
-    "vue-router": "^4.2.5"
+    "vue-router": "4.5.1"
   },
   "devDependencies": {
     "@types/node": "^14.18.63",

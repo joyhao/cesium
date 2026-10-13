@@ -60,8 +60,10 @@ export default defineConfig({
     },
   },
   optimizeDeps: {
-    exclude: ["cesium"],
-    // cesium 被 exclude 后按源码加载，其内部引用的这两个包（含 CJS 依赖如 mersenne-twister）必须预构建为 ESM
-    include: ["@cesium/engine", "@cesium/widgets"],
+    // 让 Vite 用 esbuild 预构建 cesium 及其子包，将其内部 CJS 依赖（如 mersenne-twister）
+    // 封装为带 default 导出的 ESM，避免浏览器直接加载 CJS 源码时报
+    // "does not provide an export named 'default'" 的错误。
+    // 注意：不能 exclude cesium，否则其内部的 @cesium/engine 等子包不会被扫描预构建。
+    include: ["cesium", "@cesium/engine", "@cesium/widgets", "mersenne-twister"],
   },
 });

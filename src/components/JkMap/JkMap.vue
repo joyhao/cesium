@@ -1,12 +1,24 @@
 <style lang="scss" scoped src="./index.scss"></style>
 
 <template>
-  <section ref="container" class="container">
+  <section ref="container" class="container" :class="{ drawing: isLine }">
     <div class="camera-info">
       <span>高度 {{ info.height.toLocaleString() }} m</span>
       <span>层级 {{ info.level }}</span>
       <span>FPS {{ info.fps }}</span>
       <span>点位 {{ info.loadedPoints }} / {{ info.totalPoints }}</span>
+    </div>
+
+
+    <div class="toolbar">
+      <button
+        class="tool-btn"
+        :class="{ active: isLine }"
+        @click="drawLineClick"
+      >
+        {{ isLine ? "退出连线" : "连线模式" }}
+      </button>
+      <span v-if="isLine" class="tool-hint">左键加点 · 右键结束</span>
     </div>
   </section>
 </template>
@@ -25,6 +37,14 @@ const info = reactive({
 
 // 地图实例负责统一创建 Viewer、图层、相机和点位模块。
 let map: JkMap;
+
+
+// 连线模式状态（驱动按钮高亮、文字与光标），由地图实例 toggleLine 同步。
+const isLine = ref(false);
+
+function drawLineClick() {
+  isLine.value = map.points.toggleLine();
+}
 
 onMounted(() => {
   map = new JkMap(".container");

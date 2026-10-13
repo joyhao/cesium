@@ -44,6 +44,9 @@ export class JkPoints extends JkBase {
   private lineBuilder = new PolylineBuilder();
   private linePrimitive?: Primitive;
 
+  // 连线模式开关：true=左键追加折线顶点、右键结束；false=普通拾取模式
+  isLine = false;
+
   constructor() {
     super();
 
@@ -72,25 +75,25 @@ export class JkPoints extends JkBase {
   }
 
   onLeftClick(position: Cartesian2) {
-    console.log(position);
-
-    const id = this.pickPoint(position);
-    if (id === undefined) {
+    // 连线模式：左键在地图坐标处追加折线顶点。
+    if (this.isLine) {
       const scene = this.viewer.scene;
       const mapPosition =
         (scene.pickPositionSupported
           ? scene.pickPosition(position)
           : undefined) ??
         this.viewer.camera.pickEllipsoid(position, scene.globe.ellipsoid);
-
       if (!mapPosition) return;
-
       this.lineBuilder.addPoint(mapPosition);
       this.redrawLine();
       return;
     }
 
-    console.log(id);
+    // 普通模式：仅做点位拾取，命中则打印 id。
+    const id = this.pickPoint(position);
+    if (id !== undefined) {
+      console.log(id);
+    }
   }
 
   private redrawLine() {
@@ -107,6 +110,8 @@ export class JkPoints extends JkBase {
   }
 
   private finishLine() {
+    // 仅连线模式下右键才结束当前线，否则忽略。
+    if (!this.isLine) return;
     // 只有一个点、尚未形成线段时，移除未成形的 Primitive。
     if (this.linePrimitive && this.lineBuilder.segmentCount < 1) {
       this.viewer.scene.primitives.remove(this.linePrimitive);
@@ -115,6 +120,13 @@ export class JkPoints extends JkBase {
     // 清空当前绘制状态以开始新一条线；已 add 到场景的旧 Primitive 会保留。
     this.lineBuilder.reset();
     this.linePrimitive = undefined;
+  }
+
+  /** 切换连线模式并同步光标，返回切换后的状态供 UI 同步。 */
+  toggleLine(): boolean {
+    this.isLine = !this.isLine;
+    this.viewer.scene.canvas.style.cursor = this.isLine ? "crosshair" : "default";
+    return this.isLine;
   }
 
   onMoveClick(startPosition: Cartesian2, endPosition: Cartesian2) {
@@ -131,9 +143,11 @@ export class JkPoints extends JkBase {
     const id = this.pickPoint(position);
     if (id === this.hoverId) return;
     this.hoverId = id;
-    // 悬停在点位上显示手型光标，提示可点击；移开恢复默认。
-    this.viewer.scene.canvas.style.cursor =
-      id !== undefined ? "pointer" : "default";
+    // 连线模式下保持十字光标，不覆盖绘制态；否则按是否命中点位切换手型。
+    if (!this.isLine) {
+      this.viewer.scene.canvas.style.cursor =
+        id !== undefined ? "pointer" : "default";
+    }
     if (this.visiblePositions) {
       this.replacePrimitive(this.visiblePositions, this.visiblePoints, true);
     }
