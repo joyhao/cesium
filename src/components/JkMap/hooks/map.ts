@@ -3,18 +3,21 @@ import { JkLayer } from "./layer";
 import { JkFly } from "./fly";
 import { JkCamera } from "./camera";
 import { JkPoints } from "./points";
+import { JkLines } from "./lines";
 // 地图门面类：统一组装 Viewer、底图、相机、飞行和点位模块。
 export class JkMap extends JkBase {
   layer: JkLayer;
   fly: JkFly;
   camera: JkCamera;
   points: JkPoints;
+  lines: JkLines;
 
   private visibilityTimer?: ReturnType<typeof setTimeout>;
 
   constructor(selector: string) {
     super(selector);
 
+    this.lines = new JkLines();
     this.layer = new JkLayer();
     this.fly = new JkFly();
     this.camera = new JkCamera();
@@ -33,6 +36,7 @@ export class JkMap extends JkBase {
   }
 
   destroy() {
+    this.lines.destroy();
     this.points.destroy();
     this.camera.destroy();
     super.destroy();

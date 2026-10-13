@@ -39,11 +39,11 @@ const info = reactive({
 let map: JkMap;
 
 
-// 连线模式状态（驱动按钮高亮、文字与光标），由地图实例 toggleLine 同步。
+// 连线模式状态（驱动按钮高亮、文字与光标），由线段模块 toggleLine 同步。
 const isLine = ref(false);
 
 function drawLineClick() {
-  isLine.value = map.points.toggleLine();
+  isLine.value = map.lines.toggleLine();
 }
 
 onMounted(() => {

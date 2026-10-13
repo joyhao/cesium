@@ -8,6 +8,7 @@ import {
 } from "cesium";
 import { cEnum } from "../event/event";
 import { JkBase } from "./base";
+import type { Position } from "../type/map.type";
 import { LINE_WIDTH_PIXELS, PolylineBuilder } from "../shape/polyline";
 
 // 已完成的线段记录：保留顶点与场景图元，供面板回显、相机定位与删除。
@@ -44,15 +45,30 @@ export class JkLines extends JkBase {
     super();
 
     this.on("on_left_click", (event) => {
+      
       const { position } = event.detail;
-      this.onLeftClick(position);
+
+      this.onLeftClick(event, position);
     });
-     this.on("on_right_click", () => this.finish());
+    this.on("on_right_click", () => this.finish());
+    // 连线态下每次 mousemove 重新断言十字光标，覆盖 points 的悬停手型光标。
+    this.on("on_move_click", () => {
+      if (this.isLine) {
+        queueMicrotask(() => {
+          this.viewer.scene.canvas.style.cursor = "crosshair";
+        });
+      }
+    });
   }
 
-  /** 左键点击处理：仅在连线模式下追加折点。 */
-  onLeftClick(position: Cartesian2) {
+  /**
+   * 左键点击处理：仅在连线模式下追加折点。
+   * 连线态调用 stopImmediatePropagation 阻断后续监听（JkPoints 的点位拾取）——本模块
+   * 监听注册早于 JkPoints，故可独占左键，从而把“连线态跳过拾取”逻辑收归此处。
+   */
+  onLeftClick(event: CustomEvent<Position>, position: Cartesian2) {
     if (!this.isLine) return;
+    event.stopImmediatePropagation();
     this.addPoint(position);
   }
 
@@ -169,7 +185,7 @@ export class JkLines extends JkBase {
 
   /** 仅清理线段相关资源（不销毁共享 Viewer）。 */
   destroy() {
- 
+
     this.clearHighlight();
     for (const l of this.records) {
       if (l.primitive && !this.viewer.isDestroyed()) {

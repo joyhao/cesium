@@ -14,7 +14,6 @@ import { JkBase } from "./base";
 import { CLICK_THRESHOLD } from "../entity/entity";
 import { createCircle } from "../shape/circle";
 import { pickColor } from "../../../utils/utils";
-import { JkLines } from "./lines";
 
 export class JkPoints extends JkBase {
   worker = new Worker(new URL("../worker/points.worker.ts", import.meta.url), {
@@ -42,9 +41,6 @@ export class JkPoints extends JkBase {
 
   private hoverTimer?: ReturnType<typeof setTimeout>;
 
-  // 线段绘制与回显模块（从 points 抽取）
-  private lines = new JkLines();
-
   constructor() {
     super();
 
@@ -61,6 +57,7 @@ export class JkPoints extends JkBase {
 
     this.on("on_left_click", (event) => {
       const { position } = event.detail;
+      
       this.onLeftClick(position);
     });
 
@@ -71,29 +68,12 @@ export class JkPoints extends JkBase {
   }
 
   onLeftClick(position: Cartesian2) {
-    // 连线模式下左键由 JkLines 自行处理（加点），此处直接跳过避免重复。
-    if (this.lines.isLine) return;
-
+    
     // 普通模式：仅做点位拾取，命中则打印 id。
     const id = this.pickPoint(position);
     if (id !== undefined) {
       console.log(id);
     }
-  }
-
-  /** 切换连线模式（委托线段模块），返回切换后的状态供 UI 同步。 */
-  toggleLine(): boolean {
-    return this.lines.toggleLine();
-  }
-
-  /** 定位并高亮指定线段（委托线段模块）。 */
-  focusLine(id: number) {
-    this.lines.focusLine(id);
-  }
-
-  /** 删除指定线段（委托线段模块）。 */
-  removeLine(id: number) {
-    this.lines.removeLine(id);
   }
 
   onMoveClick(startPosition: Cartesian2, endPosition: Cartesian2) {
@@ -110,11 +90,10 @@ export class JkPoints extends JkBase {
     const id = this.pickPoint(position);
     if (id === this.hoverId) return;
     this.hoverId = id;
-    // 连线模式下保持十字光标，不覆盖绘制态；否则按是否命中点位切换手型。
-    if (!this.lines.isLine) {
-      this.viewer.scene.canvas.style.cursor =
-        id !== undefined ? "pointer" : "default";
-    }
+    // 命中点位显示手型光标，提示可点击；移开恢复默认。
+    // 连线态的十字光标由 JkLines 在 on_move_click 中重新断言，不在此处理。
+    this.viewer.scene.canvas.style.cursor =
+      id !== undefined ? "pointer" : "default";
     if (this.visiblePositions) {
       this.replacePrimitive(this.visiblePositions, this.visiblePoints, true);
     }
@@ -352,9 +331,6 @@ export class JkPoints extends JkBase {
     }
 
     this.worker.terminate();
-
-    // 清理线段模块资源（不销毁共享 Viewer）
-    this.lines.destroy();
 
     if (this.labelCollection && !this.viewer.isDestroyed()) {
       this.viewer.scene.primitives.remove(this.labelCollection);
