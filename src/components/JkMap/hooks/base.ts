@@ -7,7 +7,10 @@ import { DetailOf, MovePosition, Position } from "../type/map.type";
 export class JkBase {
   // 当前项目所有地图子模块共享同一个 Cesium Viewer。
   static viewer: Viewer;
-  private static bus = new EventTarget();
+  // 事件总线：跟随 JkMap 实例（非 static），由门面类创建后注入各子模块，
+  // 使每次建图拥有独立总线，重建/卸载时随实例回收，避免全局单例污染。
+  protected bus: EventTarget;
+  private busOffs: Array<() => void> = [];
   private fpsFrameCount = 0;
   private fpsLastTime = 0;
   private removePostRender?: () => void;
@@ -15,7 +18,8 @@ export class JkBase {
   canvas: HTMLCanvasElement | undefined;
   handler!: ScreenSpaceEventHandler;
 
-  constructor(selector?: string) {
+  constructor(selector?: string, bus?: EventTarget) {
+    this.bus = bus ?? new EventTarget();
     if (selector) {
       this.container = query(selector);
       JkBase.viewer = new Viewer(this.container, viewerOptions);
@@ -91,22 +95,30 @@ export class JkBase {
 
   destroy() {
     if (!JkBase.viewer || JkBase.viewer.isDestroyed()) return;
+    this.offAllListeners();
     this.stopFps();
     JkBase.viewer.destroy();
   }
 
-  // 统一向共享总线派发事件，供子模块调用（替换原本的 this.dispatchEvent）。
+  // 统一向本实例总线派发事件，供子模块调用（替换原本的 this.dispatchEvent）。
   emit<K extends keyof CEvent>(event: K, detail: DetailOf<CEvent[K]>) {
-    JkBase.bus.dispatchEvent(new CustomEvent(event, { detail }));
+    this.bus.dispatchEvent(new CustomEvent(event, { detail }));
   }
 
-  // 统一封装事件订阅（订阅到共享总线），并通过 CEvent 提供类型提示。
+  // 统一封装事件订阅（订阅到本实例总线），并通过 CEvent 提供类型提示。
+  // 返回的退订函数同时记入 busOffs，destroy 时统一清理，防止监听泄漏。
   on<K extends keyof CEvent>(event: K, listener: (event: CEvent[K]) => void) {
     const handler = listener as EventListener;
-    JkBase.bus.addEventListener(event, handler);
+    this.bus.addEventListener(event, handler);
 
-    return () => {
-      JkBase.bus.removeEventListener(event, handler);
-    };
+    const off = () => this.bus.removeEventListener(event, handler);
+    this.busOffs.push(off);
+    return off;
+  }
+
+  // 统一退订本实例在总线上注册的所有监听。
+  protected offAllListeners() {
+    this.busOffs.forEach((off) => off());
+    this.busOffs = [];
   }
 }

@@ -8,17 +8,8 @@ import {
 } from "cesium";
 import { cEnum } from "../event/event";
 import { JkBase } from "./base";
-import type { Position } from "../type/map.type";
+import type { LineRecord, Position } from "../type/map.type";
 import { LINE_WIDTH_PIXELS, PolylineBuilder } from "../shape/polyline";
-
-// 已完成的线段记录：保留顶点与场景图元，供面板回显、相机定位与删除。
-interface LineRecord {
-  id: number;
-  name: string;
-  positions: Cartesian3[];
-  primitive?: Primitive;
-  boundingSphere: BoundingSphere;
-}
 
 /**
  * 线段绘制与回显模块：从 JkPoints 抽取出的画线逻辑。
@@ -41,8 +32,8 @@ export class JkLines extends JkBase {
   private focusedId?: number;
 
 
-  constructor() {
-    super();
+  constructor(bus: EventTarget) {
+    super(undefined, bus);
 
     this.on("on_left_click", (event) => {
       
@@ -185,6 +176,7 @@ export class JkLines extends JkBase {
 
   /** 仅清理线段相关资源（不销毁共享 Viewer）。 */
   destroy() {
+    this.offAllListeners();
 
     this.clearHighlight();
     for (const l of this.records) {

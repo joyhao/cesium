@@ -1,4 +1,4 @@
-import { Cartesian2 } from "cesium";
+import { BoundingSphere, Cartesian2, Cartesian3, Primitive } from "cesium";
 
 // 从 CEvent 的 CustomEvent<T> 中取出载荷类型 T
 export type DetailOf<E> = E extends CustomEvent<infer D> ? D : never;
@@ -85,6 +85,15 @@ export interface LineInfo {
   id: number;
   name: string;
   count: number;
+}
+
+// 已完成的线段记录：保留顶点与场景图元，供面板回显、相机定位与删除。
+export interface LineRecord {
+  id: number;
+  name: string;
+  positions: Cartesian3[];
+  primitive?: Primitive;
+  boundingSphere: BoundingSphere;
 }
 
 export interface LineChangeDetail {

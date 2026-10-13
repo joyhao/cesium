@@ -17,12 +17,12 @@ export class JkMap extends JkBase {
   constructor(selector: string) {
     super(selector);
 
-    this.lines = new JkLines();
+    this.lines = new JkLines(this.bus);
     this.layer = new JkLayer();
     this.fly = new JkFly();
-    this.camera = new JkCamera();
+    this.camera = new JkCamera(this.bus);
 
-    this.points = new JkPoints();
+    this.points = new JkPoints(this.bus);
 
     // 相机变化（缩放/飞行等）后延迟同步视口内点位
     // this.camera.on("camera_change", () => {

@@ -41,8 +41,8 @@ export class JkPoints extends JkBase {
 
   private hoverTimer?: ReturnType<typeof setTimeout>;
 
-  constructor() {
-    super();
+  constructor(bus: EventTarget) {
+    super(undefined, bus);
 
     // 分帧生成点位并增量下发，避免一次性生成 + 传输全量数据阻塞主线程。
     this.generatePointsInFrames();
@@ -321,6 +321,7 @@ export class JkPoints extends JkBase {
   }
 
   destroy() {
+    this.offAllListeners();
     if (this.visibilityTimer) {
       clearTimeout(this.visibilityTimer);
       this.visibilityTimer = undefined;
