@@ -43,10 +43,11 @@ export class JkPoints extends JkBase {
   private hoveredPoint?: Point;
   // 手动添加节点的 id 集合（与 worker 的 manualIds 对应），用于标记 added 与清除。
   private addedIds = new Set<number>();
-  // 手动节点完整对象列表（主线程镜像），供操作后打印当前节点数组。
-  private nodeList: Point[] = [];
   // 下次 Worker 回传结果时强制重建（标签文字变更但可见集合不变时用）。
   private pendingForceRebuild = false;
+  // 下次 Worker 回传结果时打印当前节点数组（增/删/改操作后置位）。
+  // 真正反映当前数据的是 Worker 回传的过滤结果 data.points，而非主线程镜像。
+  private pendingPrint = false;
 
   private hoverTimer?: ReturnType<typeof setTimeout>;
 
@@ -149,11 +150,9 @@ export class JkPoints extends JkBase {
     this.worker.postMessage({ type: "add_manual", points: [point] });
     this.pendingCartesian = undefined;
 
-    // 记录到主线程节点列表并打印当前数组。
-    this.nodeList.push(point);
-    console.log("[节点数组-新增后]", this.nodeList);
-
-    // 立即按当前视口重新筛选，让新点进入可见集合并重绘。
+    // 立即按当前视口重新筛选，让新点进入可见集合并重绘；
+    // 待 Worker 回传过滤结果后再打印当前节点数组。
+    this.pendingPrint = true;
     this.syncVisiblePoints();
   }
 
@@ -229,11 +228,11 @@ export class JkPoints extends JkBase {
     if (!this.viewer || this.viewer.isDestroyed()) return;
     this.worker.postMessage({ type: "remove", id });
     this.addedIds.delete(id);
-    this.nodeList = this.nodeList.filter((p) => p.id !== id);
-    console.log("[节点数组-删除后]", this.nodeList);
     this.hoveredPoint = undefined;
     this.hoverId = undefined;
     this.emitHover();
+    // 待 Worker 回传过滤结果后再打印当前节点数组。
+    this.pendingPrint = true;
     this.syncVisiblePoints();
   }
 
@@ -241,12 +240,11 @@ export class JkPoints extends JkBase {
   updatePointLabel(id: number, label: string) {
     if (!this.viewer || this.viewer.isDestroyed()) return;
     this.worker.postMessage({ type: "update", id, label });
-    const node = this.nodeList.find((p) => p.id === id);
-    if (node) node.label = label;
     if (this.hoveredPoint?.id === id) this.hoveredPoint.label = label;
-    console.log("[节点数组-修改后]", this.nodeList);
     // 可见集合未变，需强制重建才能刷新文字标签。
     this.pendingForceRebuild = true;
+    // 待 Worker 回传过滤结果（已含新 label）后再打印当前节点数组。
+    this.pendingPrint = true;
     this.syncVisiblePoints();
   }
 
@@ -351,6 +349,12 @@ export class JkPoints extends JkBase {
     const force = this.pendingForceRebuild;
     this.pendingForceRebuild = false;
     this.replacePrimitive(data.positions, data.points, force);
+    // 增/删/改操作完成、Worker 已回传最新过滤结果后，打印当前节点数组。
+    // 此处 data.points 才是真正反映增删改后的数据（含原始批量点位）。
+    if (this.pendingPrint) {
+      this.pendingPrint = false;
+      console.log("[节点数组]", data.points);
+    }
   };
 
   /** 用 Worker 回传的坐标与完整点位批量构建一个 Primitive。 */
@@ -473,7 +477,6 @@ export class JkPoints extends JkBase {
     this.hoverId = undefined;
     this.hoveredPoint = undefined;
     this.addedIds.clear();
-    this.nodeList = [];
     this.emitChange();
   }
 
@@ -482,9 +485,9 @@ export class JkPoints extends JkBase {
     if (!this.viewer || this.viewer.isDestroyed()) return;
     this.pendingCartesian = undefined;
     this.addedIds.clear();
-    this.nodeList = [];
-    console.log("[节点数组-清空后]", this.nodeList);
     this.worker.postMessage({ type: "clear_added" });
+    // 待 Worker 回传过滤结果后再打印当前节点数组。
+    this.pendingPrint = true;
     this.syncVisiblePoints();
   }
 
