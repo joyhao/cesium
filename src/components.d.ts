@@ -7,8 +7,10 @@ export {}
 
 declare module 'vue' {
   export interface GlobalComponents {
+    AddPointDialog: typeof import('./components/JkMap/AddPointDialog.vue')['default']
     JkCar: typeof import('./components/JkCar/JkCar.vue')['default']
     JkMap: typeof import('./components/JkMap/JkMap.vue')['default']
+    PointHoverActions: typeof import('./components/JkMap/PointHoverActions.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
     SideBar: typeof import('./components/SideBar.vue')['default']

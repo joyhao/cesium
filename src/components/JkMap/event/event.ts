@@ -1,8 +1,10 @@
 import type {
+  AddPointRequestDetail,
   CameraChangeDetail,
   CesiumInfo,
   DrawingChangeDetail,
   LineChangeDetail,
+  PointHoverDetail,
   Position,
   PointsChangeDetail,
   MovePosition,
@@ -20,6 +22,8 @@ export enum cEnum {
   on_move_click = "on_move_click",
   drawing_change = "drawing_change",
   line_change = "line_change",
+  add_point_request = "add_point_request",
+  point_hover = "point_hover",
 }
 
 /** 自定义事件名称与事件对象类型的映射 */
@@ -34,4 +38,6 @@ export interface CEvent {
   on_move_click: CustomEvent<MovePosition>;
   drawing_change: CustomEvent<DrawingChangeDetail>;
   line_change: CustomEvent<LineChangeDetail>;
+  add_point_request: CustomEvent<AddPointRequestDetail>;
+  point_hover: CustomEvent<PointHoverDetail | null>;
 }

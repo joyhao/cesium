@@ -4,6 +4,8 @@ import type { InMessage, Point } from "../type/map.type";
 
 // Worker 内累积主线程分批下发的点位，后续仅按视口矩形筛选。
 let pointList: Point[] = [];
+// 手动添加节点的 id 集合，clear_added 据此精确清除，不依赖 id 正负号。
+const manualIds = new Set<number>();
 
 const ctx = self as unknown as {
   onmessage: ((event: MessageEvent<InMessage>) => void) | null;
@@ -15,6 +17,33 @@ ctx.onmessage = (event: MessageEvent<InMessage>) => {
 
   if (message.type === "add") {
     pointList.push(...message.points);
+    return;
+  }
+
+  // 手动添加的节点：记录 id 并加入列表，供 clear_added 精确移除。
+  if (message.type === "add_manual") {
+    for (const point of message.points) manualIds.add(point.id);
+    pointList.push(...message.points);
+    return;
+  }
+
+  // 清除手动添加的节点，仅保留批量点位。
+  if (message.type === "clear_added") {
+    pointList = pointList.filter((point) => !manualIds.has(point.id));
+    manualIds.clear();
+    return;
+  }
+
+  // 删除指定 id 的节点（手动或批量均可）。
+  if (message.type === "remove") {
+    pointList = pointList.filter((point) => point.id !== message.id);
+    return;
+  }
+
+  // 修改指定 id 节点的名称（label）。
+  if (message.type === "update") {
+    const target = pointList.find((point) => point.id === message.id);
+    if (target) target.label = message.label;
     return;
   }
 

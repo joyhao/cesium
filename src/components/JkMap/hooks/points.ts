@@ -1,6 +1,7 @@
 import {
   Cartesian2,
   Cartesian3,
+  Cartographic,
   Color,
   LabelCollection,
   LabelStyle,
@@ -38,8 +39,21 @@ export class JkPoints extends JkBase {
 
   // 当前鼠标悬停的点位 id（同一时刻最多一个，移开则为 undefined）。
   private hoverId: number | undefined = undefined;
+  // 当前悬停的点位完整对象，供上层计算屏幕坐标、渲染编辑/删除图标使用。
+  private hoveredPoint?: Point;
+  // 手动添加节点的 id 集合（与 worker 的 manualIds 对应），用于标记 added 与清除。
+  private addedIds = new Set<number>();
+  // 手动节点完整对象列表（主线程镜像），供操作后打印当前节点数组。
+  private nodeList: Point[] = [];
+  // 下次 Worker 回传结果时强制重建（标签文字变更但可见集合不变时用）。
+  private pendingForceRebuild = false;
 
   private hoverTimer?: ReturnType<typeof setTimeout>;
+
+  // 节点添加模式：开启后左键在地图上落点，而非进行点位拾取。
+  private isAddPoint = false;
+  // 待确认落点的世界坐标：左键落点后弹窗，确认才真正作为点位下发。
+  private pendingCartesian?: Cartesian3;
 
   constructor() {
     super();
@@ -47,7 +61,7 @@ export class JkPoints extends JkBase {
     // 分帧生成点位并增量下发，避免一次性生成 + 传输全量数据阻塞主线程。
     this.generatePointsInFrames();
 
-    // 所有点位的文字标签集合（label 取自统一后的 PointPosition.label）。
+    // 所有点位的文字标签集合（label 取自统一后的 Point.label）。
     this.labelCollection = this.viewer.scene.primitives.add(
       new LabelCollection({ scene: this.viewer.scene }),
     );
@@ -55,8 +69,12 @@ export class JkPoints extends JkBase {
     // 绑定事件
     this.worker.addEventListener("message", this.onWorkerMessage);
 
+    // 相机移动时若正悬停某节点，重新计算其屏幕坐标并派发，使图标跟随节点。
+    this.viewer.camera.changed.addEventListener(() => {
+      if (this.hoveredPoint && !this.isAddPoint) this.emitHover();
+    });
+
     this.on("on_left_click", (event) => {
-      console.log(11111);
       const { position } = event.detail;
       this.onLeftClick(position);
     });
@@ -68,15 +86,88 @@ export class JkPoints extends JkBase {
   }
 
   onLeftClick(position: Cartesian2) {
+    // 节点添加模式：左键落点，不进入拾取逻辑。
+    if (this.isAddPoint) {
+      this.addPoint(position);
+      return;
+    }
 
-    // 普通模式：仅做点位拾取，命中则打印 id。
+    // 普通模式：仅做点位拾取，命中则打印 id（手动节点也是普通点位，自然命中）。
     const id = this.pickPoint(position);
     if (id !== undefined) {
       console.log(id);
     }
   }
 
+  /** 切换节点添加模式，返回新模式是否开启。 */
+  toggleAddPoint(): boolean {
+    this.isAddPoint = !this.isAddPoint;
+    if (!this.isAddPoint) {
+      this.viewer.scene.canvas.style.cursor = "default";
+    }
+    return this.isAddPoint;
+  }
+
+  /**
+   * 左键落点：反投影屏幕坐标到世界坐标，暂存为待确认坐标并发出请求，
+   * 由弹窗表单确认名称（label）后才真正落图。
+   */
+  private addPoint(position: Cartesian2) {
+    const cart =
+      this.viewer.scene.pickPosition(position) ??
+      this.viewer.camera.pickEllipsoid(
+        position,
+        this.viewer.scene.globe.ellipsoid,
+      );
+    if (!cart) return;
+
+    const cartographic = Cartographic.fromCartesian(cart);
+    const lon = (cartographic.longitude * 180) / Math.PI;
+    const lat = (cartographic.latitude * 180) / Math.PI;
+    const height = cartographic.height;
+
+    // 暂存待确认坐标，弹窗确认后再落点。
+    this.pendingCartesian = cart;
+    this.emit(cEnum.add_point_request, { position: cart, lon, lat, height });
+  }
+
+  /** 弹窗确认后，把节点作为普通点位下发 Worker，由现有渲染管线统一着色/打标签。 */
+  commitAddPoint(label: string) {
+    if (!this.pendingCartesian) return;
+
+    const cartographic = Cartographic.fromCartesian(this.pendingCartesian);
+    const lon = (cartographic.longitude * 180) / Math.PI;
+    const lat = (cartographic.latitude * 180) / Math.PI;
+    const height = cartographic.height;
+    // 时间戳*1000 + 随机后缀，避免与批量点位（0..N）冲突；正数 id，靠 worker 的 manualIds 区分手动节点。
+    const id = Date.now() * 1000 + Math.floor(Math.random() * 1000);
+    const point: Point = { id, lon, lat, height, label };
+    this.addedIds.add(id);
+
+    // 与批量点位走同一条 “add → filter → replacePrimitive → eachList” 链路，
+    // 颜色、标签、悬停、点击全部复用既有逻辑，不再单独维护一套渲染分支。
+    this.worker.postMessage({ type: "add_manual", points: [point] });
+    this.pendingCartesian = undefined;
+
+    // 记录到主线程节点列表并打印当前数组。
+    this.nodeList.push(point);
+    console.log("[节点数组-新增后]", this.nodeList);
+
+    // 立即按当前视口重新筛选，让新点进入可见集合并重绘。
+    this.syncVisiblePoints();
+  }
+
+  /** 取消本次添加，丢弃待确认坐标。 */
+  cancelAddPoint() {
+    this.pendingCartesian = undefined;
+  }
+
   onMoveClick(startPosition: Cartesian2, endPosition: Cartesian2) {
+    // 节点添加模式：固定十字光标，不处理悬停拾取。
+    if (this.isAddPoint) {
+      this.viewer.scene.canvas.style.cursor = "crosshair";
+      return;
+    }
     // 节流：一个周期内只处理一次，避免高频 mousemove 卡顿。
     if (this.hoverTimer) return;
     this.hoverTimer = setTimeout(() => {
@@ -97,10 +188,71 @@ export class JkPoints extends JkBase {
     if (this.visiblePositions) {
       this.replacePrimitive(this.visiblePositions, this.visiblePoints, true);
     }
+    // 同步悬停节点详情给上层，用于渲染编辑/删除图标。
+    this.hoveredPoint =
+      id !== undefined
+        ? this.visiblePoints.find((p) => p.id === id)
+        : undefined;
+    this.emitHover();
+  }
+
+  /** 计算悬停节点的屏幕坐标并派发 point_hover（无悬停或不在屏幕内则派发 null）。 */
+  private emitHover() {
+    if (!this.hoveredPoint) {
+      this.emit(cEnum.point_hover, null);
+      return;
+    }
+    const cart = Cartesian3.fromDegrees(
+      this.hoveredPoint.lon,
+      this.hoveredPoint.lat,
+      this.hoveredPoint.height,
+    );
+    const screen = this.viewer.scene.cartesianToCanvasCoordinates(cart);
+    if (!screen) {
+      this.emit(cEnum.point_hover, null);
+      return;
+    }
+    this.emit(cEnum.point_hover, {
+      id: this.hoveredPoint.id,
+      x: screen.x,
+      y: screen.y,
+      label: this.hoveredPoint.label,
+      lon: this.hoveredPoint.lon,
+      lat: this.hoveredPoint.lat,
+      height: this.hoveredPoint.height,
+      added: this.addedIds.has(this.hoveredPoint.id),
+    });
+  }
+
+  /** 删除指定节点：从 Worker 移除后重新按视口筛选重绘。 */
+  removePoint(id: number) {
+    if (!this.viewer || this.viewer.isDestroyed()) return;
+    this.worker.postMessage({ type: "remove", id });
+    this.addedIds.delete(id);
+    this.nodeList = this.nodeList.filter((p) => p.id !== id);
+    console.log("[节点数组-删除后]", this.nodeList);
+    this.hoveredPoint = undefined;
+    this.hoverId = undefined;
+    this.emitHover();
+    this.syncVisiblePoints();
+  }
+
+  /** 修改指定节点的名称（label）：更新 Worker 并强制重建标签文字。 */
+  updatePointLabel(id: number, label: string) {
+    if (!this.viewer || this.viewer.isDestroyed()) return;
+    this.worker.postMessage({ type: "update", id, label });
+    const node = this.nodeList.find((p) => p.id === id);
+    if (node) node.label = label;
+    if (this.hoveredPoint?.id === id) this.hoveredPoint.label = label;
+    console.log("[节点数组-修改后]", this.nodeList);
+    // 可见集合未变，需强制重建才能刷新文字标签。
+    this.pendingForceRebuild = true;
+    this.syncVisiblePoints();
   }
 
   /**
    * 把屏幕坐标反投影到可见点位，返回容差内最近的那个点 id。
+   * 手动添加的节点也是普通点位，会随视口筛选进入 visiblePoints，自然被命中。
    * @param position  鼠标位置
    * @returns
    */
@@ -122,9 +274,7 @@ export class JkPoints extends JkBase {
       const screen = scene.cartesianToCanvasCoordinates(cart);
       if (!screen) continue;
 
-      const dx = screen.x - position.x;
-      const dy = screen.y - position.y;
-      const dist = Math.sqrt(dx * dx + dy * dy);
+      const dist = Math.hypot(screen.x - position.x, screen.y - position.y);
       if (dist <= bestDist) {
         bestDist = dist;
         bestId = this.visiblePoints[i].id;
@@ -197,7 +347,10 @@ export class JkPoints extends JkBase {
   private onWorkerMessage = (event: MessageEvent<WorkerResult>) => {
     const data = event.data;
     if (data.type !== "result") return;
-    this.replacePrimitive(data.positions, data.points);
+    // 仅改标签时可见集合不变，需借助强制标记触发标签重建。
+    const force = this.pendingForceRebuild;
+    this.pendingForceRebuild = false;
+    this.replacePrimitive(data.positions, data.points, force);
   };
 
   /** 用 Worker 回传的坐标与完整点位批量构建一个 Primitive。 */
@@ -212,7 +365,8 @@ export class JkPoints extends JkBase {
     if (!force && !setChanged) return;
 
     // 单遍遍历点位：同时算颜色数组、按需重建标签，圆点与文字拧到一处。
-    const colors = this.eachList(positions, points, setChanged);
+    // rebuildLabels 在“集合变化”或“强制重建（如改标签）”时为真，才会刷新文字。
+    const colors = this.eachList(positions, points, force || setChanged);
 
     const primitive = createCircle(positions, colors);
 
@@ -317,7 +471,21 @@ export class JkPoints extends JkBase {
     this.visiblePositions = undefined;
     this.visiblePoints = [];
     this.hoverId = undefined;
+    this.hoveredPoint = undefined;
+    this.addedIds.clear();
+    this.nodeList = [];
     this.emitChange();
+  }
+
+  /** 清空手动添加的节点：从 Worker 移除并重新筛选重绘。 */
+  clearAdded() {
+    if (!this.viewer || this.viewer.isDestroyed()) return;
+    this.pendingCartesian = undefined;
+    this.addedIds.clear();
+    this.nodeList = [];
+    console.log("[节点数组-清空后]", this.nodeList);
+    this.worker.postMessage({ type: "clear_added" });
+    this.syncVisiblePoints();
   }
 
   destroy() {
@@ -338,6 +506,7 @@ export class JkPoints extends JkBase {
       this.labelCollection = undefined;
     }
 
+    this.pendingCartesian = undefined;
     this.clear();
   }
 }
