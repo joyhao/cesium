@@ -32,17 +32,17 @@ export class JkLines extends JkBase {
   private focusedId?: number;
 
 
-  constructor(bus: EventTarget) {
-    super(undefined, bus);
+  constructor() {
+    super();
 
     this.on("on_left_click", (event) => {
+      console.log(2222);
       const { position } = event.detail;
-
       this.onLeftClick(event, position);
     });
     this.on("on_right_click", () => this.finish());
     // 连线态下每次 mousemove 重新断言十字光标，覆盖 points 的悬停手型光标。
-    this.on("on_move_click", () => {
+    this.on("on_move_click", (event) => {
       if (this.isLine) {
         queueMicrotask(() => {
           this.viewer.scene.canvas.style.cursor = "crosshair";

@@ -11,8 +11,8 @@ export class JkCamera extends JkBase {
   // 收集所有事件监听的移除函数，destroy 时统一执行，避免每个监听写一对字段。
   private disposers: Event.RemoveCallback[] = [];
 
-  constructor(bus: EventTarget) {
-    super(undefined, bus);
+  constructor() {
+    super();
 
     this.viewer = JkBase.viewer;
 

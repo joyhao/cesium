@@ -41,8 +41,8 @@ export class JkPoints extends JkBase {
 
   private hoverTimer?: ReturnType<typeof setTimeout>;
 
-  constructor(bus: EventTarget) {
-    super(undefined, bus);
+  constructor() {
+    super();
 
     // 分帧生成点位并增量下发，避免一次性生成 + 传输全量数据阻塞主线程。
     this.generatePointsInFrames();
@@ -56,8 +56,8 @@ export class JkPoints extends JkBase {
     this.worker.addEventListener("message", this.onWorkerMessage);
 
     this.on("on_left_click", (event) => {
+      console.log(11111);
       const { position } = event.detail;
-      
       this.onLeftClick(position);
     });
 
@@ -68,7 +68,7 @@ export class JkPoints extends JkBase {
   }
 
   onLeftClick(position: Cartesian2) {
-    
+
     // 普通模式：仅做点位拾取，命中则打印 id。
     const id = this.pickPoint(position);
     if (id !== undefined) {
