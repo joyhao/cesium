@@ -3,19 +3,20 @@ import {
   CustomShader,
   HeadingPitchRange,
   LightingModel,
+  CustomShaderTranslucencyMode,
   Math as CesiumMath,
   UrlTemplateImageryProvider,
   Viewer,
 } from "cesium";
 import { JkBase } from "./base";
-import tilesetFragmentShader from "../shader/tileset.frag.glsl";
+import glassFragmentShader from "../shader/glass.frag.glsl";
 
 // 创建并叠加天地图矢量底图和注记图层。
 export class JkLayer extends JkBase {
   viewer: Viewer;
   AppConfig = inject<AppConfig>("AppConfig") as AppConfig;
   private tilesets: Cesium3DTileset[] = [];
-  private customShader?: CustomShader;
+  private glassShader?: CustomShader;
 
   constructor() {
     super();
@@ -23,8 +24,6 @@ export class JkLayer extends JkBase {
     this.init();
     void this.loadTileset();
   }
-
-
 
   init() {
     const { token, vector, subdomains, cia } = this.AppConfig;
@@ -46,12 +45,12 @@ export class JkLayer extends JkBase {
     this.viewer.imageryLayers.addImageryProvider(annotationProvider);
   }
 
-
   async loadTileset() {
     const tilesetUrls = this.AppConfig.tilesetUrls;
-    this.customShader = new CustomShader({
-      lightingModel: LightingModel.UNLIT,
-      fragmentShaderText: tilesetFragmentShader,
+    this.glassShader = new CustomShader({
+      lightingModel: LightingModel.PBR,
+      translucencyMode: CustomShaderTranslucencyMode.TRANSLUCENT,
+      fragmentShaderText: glassFragmentShader,
     });
 
     const results = await Promise.allSettled(
@@ -60,12 +59,16 @@ export class JkLayer extends JkBase {
 
     results.forEach((result, index) => {
       if (result.status === "rejected") {
-        console.error(`3D Tiles 加载失败：${tilesetUrls[index]}`, result.reason);
+        console.error(
+          `3D Tiles 加载失败：${tilesetUrls[index]}`,
+          result.reason,
+        );
         return;
       }
       if (index === 0) {
-      result.value.customShader = this.customShader;
-        
+        result.value.customShader = this.glassShader;
+      } else if (index === 1) {
+        //   result.value.customShader = this.customShader;
       }
       this.tilesets.push(result.value);
       this.viewer.scene.primitives.add(result.value);
@@ -73,7 +76,6 @@ export class JkLayer extends JkBase {
 
     this.resetView();
   }
-
 
   resetView() {
     const tileset = this.tilesets[0];
@@ -88,7 +90,6 @@ export class JkLayer extends JkBase {
     );
   }
 
-
   destroy() {
     if (!this.viewer.isDestroyed()) {
       this.tilesets.forEach((tileset) => {
@@ -99,6 +100,4 @@ export class JkLayer extends JkBase {
     this.customShader?.destroy();
     this.customShader = undefined;
   }
-
-
 }
