@@ -7,6 +7,7 @@
       <span>层级 {{ info.level }}</span>
       <span>FPS {{ info.fps }}</span>
       <span>点位 {{ info.loadedPoints }} / {{ info.totalPoints }}</span>
+      <span>线段 {{ info.totalLines }}</span>
     </div>
 
 
@@ -45,6 +46,13 @@
       @edit="onEdit"
       @delete="onDelete"
     />
+    <PointHoverActions
+      v-if="hoveredLine && !hovered"
+      :x="hoveredLine.x"
+      :y="hoveredLine.y"
+      @edit="onLineEdit"
+      @delete="onLineDelete"
+    />
   </section>
 </template>
 
@@ -55,8 +63,10 @@ import AddPointDialog from "./AddPointDialog.vue";
 import PointHoverActions from "./PointHoverActions.vue";
 import type {
   AddPointRequestDetail,
+  LineHoverDetail,
   PointHoverDetail,
 } from "./type/map.type";
+import { BEIJING_LINES } from "../../stores/lines";
 
 // 将 Cesium 事件转换为 Vue 响应式状态，供右上角信息面板展示。
 const info = reactive({
@@ -65,6 +75,7 @@ const info = reactive({
   fps: 0,
   loadedPoints: 0,
   totalPoints: 0,
+  totalLines: 0,
 });
 
 // 地图实例负责统一创建 Viewer、图层、相机和点位模块。
@@ -86,6 +97,10 @@ const pendingEditId = ref<number | null>(null);
 
 // hover 节点时显示的编辑/删除图标条及其屏幕坐标。
 const hovered = ref<PointHoverDetail | null>(null);
+// hover 线段时显示的编辑/删除图标条及其屏幕坐标。
+const hoveredLine = ref<LineHoverDetail | null>(null);
+// 编辑态下正在编辑的线段 id（null 表示当前为新增节点 / 非线段编辑）。
+const pendingEditLineId = ref<number | null>(null);
 
 function drawLineClick() {
   isLine.value = map.lines.toggleLine();
@@ -98,7 +113,9 @@ function addPointClick() {
 
 // 弹窗确认：编辑态更新 label，新增态落点。
 function onAddConfirm(label: string) {
-  if (pendingEditId.value !== null) {
+  if (pendingEditLineId.value !== null) {
+    map.lines.updateLineName(pendingEditLineId.value, label);
+  } else if (pendingEditId.value !== null) {
     map.points.updatePointLabel(pendingEditId.value, label);
   } else {
     map.points.commitAddPoint(label);
@@ -115,6 +132,7 @@ function onAddCancel() {
 // 统一关闭弹窗并重置编辑态。
 function closeDialog() {
   pendingEditId.value = null;
+  pendingEditLineId.value = null;
   editName.value = "";
   editTitle.value = "添加节点";
   showAddDialog.value = false;
@@ -145,8 +163,28 @@ function onDelete() {
   hovered.value = null;
 }
 
+// 点击线段图标“编辑”：打开预填名称的弹窗，提交后改名为该线段。
+function onLineEdit() {
+  if (!hoveredLine.value) return;
+  editName.value = hoveredLine.value.name;
+  editTitle.value = "编辑线段";
+  pendingEditLineId.value = hoveredLine.value.id;
+  showAddDialog.value = true;
+  hoveredLine.value = null;
+}
+
+// 点击线段图标“删除”：移除该线段。
+function onLineDelete() {
+  if (!hoveredLine.value) return;
+  map.lines.removeLine(hoveredLine.value.id);
+  hoveredLine.value = null;
+}
+
 onMounted(() => {
   map = new JkMap(".container");
+
+  // 加载 store 中的默认示例线段（含名称与顶点），渲染到地图并归档。
+  map.lines.loadLines(BEIJING_LINES);
 
   map.camera.on("camera_change", (event) => {
     const { height, level } = event.detail;
@@ -166,6 +204,11 @@ onMounted(() => {
     info.totalPoints = total;
   });
 
+  // 线段增删改后刷新线段数量统计。
+  map.lines.on("line_change", (event) => {
+    info.totalLines = event.detail.lines.length;
+  });
+
   // 左键落点后弹出表单，填写名称（label）后再落图。
   map.points.on("add_point_request", (event) => {
     addDialogData.value = event.detail;
@@ -178,6 +221,11 @@ onMounted(() => {
   // hover 节点时显示编辑/删除图标条。
   map.points.on("point_hover", (event) => {
     hovered.value = event.detail;
+  });
+
+  // hover 线段时显示编辑/删除图标条。
+  map.lines.on("line_hover", (event) => {
+    hoveredLine.value = event.detail;
   });
 });
 

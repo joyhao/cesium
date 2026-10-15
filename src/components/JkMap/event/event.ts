@@ -4,6 +4,7 @@ import type {
   CesiumInfo,
   DrawingChangeDetail,
   LineChangeDetail,
+  LineHoverDetail,
   PointHoverDetail,
   Position,
   PointsChangeDetail,
@@ -24,6 +25,7 @@ export enum cEnum {
   line_change = "line_change",
   add_point_request = "add_point_request",
   point_hover = "point_hover",
+  line_hover = "line_hover",
 }
 
 /** 自定义事件名称与事件对象类型的映射 */
@@ -40,4 +42,5 @@ export interface CEvent {
   line_change: CustomEvent<LineChangeDetail>;
   add_point_request: CustomEvent<AddPointRequestDetail>;
   point_hover: CustomEvent<PointHoverDetail | null>;
+  line_hover: CustomEvent<LineHoverDetail | null>;
 }

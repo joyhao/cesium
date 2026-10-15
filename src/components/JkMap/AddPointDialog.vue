@@ -1,5 +1,5 @@
 <template>
-  <div v-if="data" class="modal-mask" @click.self="$emit('cancel')">
+  <div class="modal-mask" @click.self="$emit('cancel')">
     <div class="modal">
       <h3 class="modal-title">{{ title ?? "添加节点" }}</h3>
       <form class="form" @submit.prevent="confirm">
@@ -10,10 +10,10 @@
             v-model="name"
             class="input"
             type="text"
-            placeholder="请输入节点名称"
+            placeholder="请输入名称"
           />
         </label>
-        <div class="coords">
+        <div class="coords" v-if="data">
           <div class="coord">
             <span>经度</span><b>{{ data.lon.toFixed(6) }}</b>
           </div>
@@ -42,7 +42,7 @@ import { nextTick, onMounted, ref } from "vue";
 import type { AddPointRequestDetail } from "./type/map.type";
 
 const props = defineProps<{
-  data: AddPointRequestDetail | null;
+  data?: AddPointRequestDetail | null;
   name?: string;
   title?: string;
 }>();

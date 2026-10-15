@@ -8,7 +8,7 @@ export type { LineData, LineVertex };
 export const BEIJING_LINES: LineData[] = [
   {
     id: 0,
-    name: "长安街",
+    label: "长安街",
     points: [
       { lon: 116.3675, lat: 39.9087, height: 0 },
       { lon: 116.3975, lat: 39.9087, height: 0 },
@@ -17,7 +17,7 @@ export const BEIJING_LINES: LineData[] = [
   },
   {
     id: 1,
-    name: "二环北段",
+    label: "二环北段",
     points: [
       { lon: 116.3512, lat: 39.9492, height: 0 },
       { lon: 116.3854, lat: 39.9563, height: 0 },
@@ -27,7 +27,7 @@ export const BEIJING_LINES: LineData[] = [
   },
   {
     id: 2,
-    name: "机场高速",
+    label: "机场高速",
     points: [
       { lon: 116.4039, lat: 39.9219, height: 0 },
       { lon: 116.4833, lat: 39.9712, height: 0 },
@@ -37,7 +37,7 @@ export const BEIJING_LINES: LineData[] = [
   },
   {
     id: 3,
-    name: "京藏高速",
+    label: "京藏高速",
     points: [
       { lon: 116.3319, lat: 39.9492, height: 0 },
       { lon: 116.3312, lat: 39.9856, height: 0 },
@@ -46,7 +46,7 @@ export const BEIJING_LINES: LineData[] = [
   },
   {
     id: 4,
-    name: "南中轴",
+    label: "南中轴",
     points: [
       { lon: 116.3975, lat: 39.8585, height: 0 },
       { lon: 116.3975, lat: 39.8821, height: 0 },
@@ -55,7 +55,7 @@ export const BEIJING_LINES: LineData[] = [
   },
   {
     id: 5,
-    name: "北四环",
+    label: "北四环",
     points: [
       { lon: 116.3004, lat: 39.9901, height: 0 },
       { lon: 116.3521, lat: 39.9928, height: 0 },
@@ -65,7 +65,7 @@ export const BEIJING_LINES: LineData[] = [
   },
   {
     id: 6,
-    name: "东三环",
+    label: "东三环",
     points: [
       { lon: 116.4531, lat: 39.8812, height: 0 },
       { lon: 116.4559, lat: 39.9187, height: 0 },
@@ -74,7 +74,7 @@ export const BEIJING_LINES: LineData[] = [
   },
   {
     id: 7,
-    name: "西二环",
+    label: "西二环",
     points: [
       { lon: 116.3512, lat: 39.8812, height: 0 },
       { lon: 116.3498, lat: 39.9187, height: 0 },
@@ -83,7 +83,7 @@ export const BEIJING_LINES: LineData[] = [
   },
   {
     id: 8,
-    name: "通州线",
+    label: "通州线",
     points: [
       { lon: 116.4581, lat: 39.9027, height: 0 },
       { lon: 116.5289, lat: 39.9051, height: 0 },
@@ -93,7 +93,7 @@ export const BEIJING_LINES: LineData[] = [
   },
   {
     id: 9,
-    name: "海淀线",
+    label: "海淀线",
     points: [
       { lon: 116.2841, lat: 39.9612, height: 0 },
       { lon: 116.3064, lat: 39.9845, height: 0 },

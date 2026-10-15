@@ -54,10 +54,10 @@ export interface LineVertex {
   height: number;
 }
 
-// 单条线段数据：含唯一 id、名称与有序顶点列表。
+// 单条线段数据：含唯一 id、标签与有序顶点列表。
 export interface LineData {
   id: number;
-  name: string;
+  label: string;
   points: LineVertex[];
 }
 
@@ -138,4 +138,12 @@ export interface PointHoverDetail {
   height: number;
   // 是否为手动添加的节点（id < 0），便于上层区分操作范围。
   added: boolean;
+}
+
+// hover 命中线段时派发，携带屏幕坐标与线段信息，供上层渲染编辑/删除图标。
+export interface LineHoverDetail {
+  id: number;
+  x: number;
+  y: number;
+  name: string;
 }
