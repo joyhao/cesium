@@ -208,6 +208,8 @@ onMounted(() => {
   map.lines.on("line_change", (event) => {
     info.totalLines = event.detail.lines.length;
   });
+  // 默认线段在订阅前已加载，初始化统计需直接读取当前列表。
+  info.totalLines = map.lines.lineList.length;
 
   // 左键落点后弹出表单，填写名称（label）后再落图。
   map.points.on("add_point_request", (event) => {
