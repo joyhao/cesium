@@ -1,4 +1,4 @@
-import { Viewer, Event } from "cesium";
+import { Viewer, Event, Math as ViewerMath } from "cesium";
 import { cEnum } from "../event/event";
 
 import { JkBase } from "./base";
@@ -24,13 +24,17 @@ export class JkCamera extends JkBase {
   }
 
   private update = () => {
-    const height = this.viewer.camera.positionCartographic.height;
+    const camera = this.viewer.camera;
+    const height = camera.positionCartographic.height;
     this.height = Math.round(height);
     this.level = this.heightToLevel(height);
 
     this.emit(cEnum.camera_change, {
       height: this.height,
       level: this.level,
+      heading: ViewerMath.toDegrees(camera.heading),
+      pitch: ViewerMath.toDegrees(camera.pitch),
+      roll: ViewerMath.toDegrees(camera.roll),
     });
   };
 

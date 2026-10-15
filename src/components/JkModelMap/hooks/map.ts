@@ -21,6 +21,10 @@ export class JkMap extends JkBase {
     });
   }
 
+  resetView() {
+    this.layer.resetView();
+  }
+
   destroy() {
     this.layer.destroy();
     this.camera.destroy();

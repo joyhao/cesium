@@ -4,6 +4,27 @@
   height: 100%;
 }
 
+.reset-view {
+  position: absolute;
+  z-index: 2;
+  top: 16px;
+  left: 16px;
+  padding: 10px 14px;
+  border: 1px solid rgba(126, 191, 230, 0.4);
+  border-radius: 8px;
+  background: rgba(5, 14, 25, 0.82);
+  color: #d7e9f8;
+  font-size: 13px;
+  cursor: pointer;
+  backdrop-filter: blur(8px);
+  transition: border-color 0.2s ease, background 0.2s ease;
+
+  &:hover {
+    border-color: #4ea1ff;
+    background: rgba(20, 50, 78, 0.92);
+  }
+}
+
 .camera-info {
   position: absolute;
   z-index: 1;

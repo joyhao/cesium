@@ -73,6 +73,10 @@ export interface MovePosition {
 export interface AppConfig {
   token: string;
   tilesetUrls: string[];
+  cameraView: {
+    heading: number;
+    pitch: number;
+  };
   vector: string;
   cia: string;
   subdomains: string[];
@@ -86,6 +90,9 @@ export interface AppConfig {
 export interface CameraChangeDetail {
   height: number;
   level: number;
+  heading: number;
+  pitch: number;
+  roll: number;
 }
 
 export interface PointsChangeDetail {

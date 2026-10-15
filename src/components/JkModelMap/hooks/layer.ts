@@ -1,17 +1,21 @@
 import {
   Cesium3DTileset,
+  CustomShader,
   HeadingPitchRange,
+  LightingModel,
   Math as CesiumMath,
   UrlTemplateImageryProvider,
   Viewer,
 } from "cesium";
 import { JkBase } from "./base";
+import tilesetFragmentShader from "../shader/tileset.frag.glsl";
 
 // 创建并叠加天地图矢量底图和注记图层。
 export class JkLayer extends JkBase {
   viewer: Viewer;
   AppConfig = inject<AppConfig>("AppConfig") as AppConfig;
   private tilesets: Cesium3DTileset[] = [];
+  private customShader?: CustomShader;
 
   constructor() {
     super();
@@ -42,8 +46,14 @@ export class JkLayer extends JkBase {
     this.viewer.imageryLayers.addImageryProvider(annotationProvider);
   }
 
+
   async loadTileset() {
     const tilesetUrls = this.AppConfig.tilesetUrls;
+    this.customShader = new CustomShader({
+      lightingModel: LightingModel.UNLIT,
+      fragmentShaderText: tilesetFragmentShader,
+    });
+
     const results = await Promise.allSettled(
       tilesetUrls.map((url) => Cesium3DTileset.fromUrl(url)),
     );
@@ -54,17 +64,28 @@ export class JkLayer extends JkBase {
         return;
       }
 
+      result.value.customShader = this.customShader;
       this.tilesets.push(result.value);
       this.viewer.scene.primitives.add(result.value);
     });
 
+    this.resetView();
+  }
+
+
+  resetView() {
     const tileset = this.tilesets[0];
-    await this.viewer.zoomTo(
+
+    void this.viewer.zoomTo(
       tileset,
-      // heading 水平方向的朝向角  0 表示正北朝向，pitch俯仰角  为 -90° 实现正上方俯视；range：相机到目标的距离 。
-      new HeadingPitchRange(0, -CesiumMath.PI_OVER_TWO, tileset.boundingSphere.radius * 2),
+      new HeadingPitchRange(
+        CesiumMath.toRadians(this.AppConfig.cameraView.heading),
+        CesiumMath.toRadians(this.AppConfig.cameraView.pitch),
+        tileset.boundingSphere.radius * 2,
+      ),
     );
   }
+
 
   destroy() {
     if (!this.viewer.isDestroyed()) {
@@ -73,6 +94,8 @@ export class JkLayer extends JkBase {
       });
     }
     this.tilesets = [];
+    this.customShader?.destroy();
+    this.customShader = undefined;
   }
 
 

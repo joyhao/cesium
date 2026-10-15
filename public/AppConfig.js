@@ -4,6 +4,10 @@ window.AppConfig = {
     "http://localhost:9528/static/zibobeizuoyequ-ground/tileset.json",
     "http://localhost:9528/static/zibobeizuoyequ-manual/tileset.json",
   ],
+  cameraView: {
+    heading: 99.4,
+    pitch: -35.8,
+  },
   vector:
     "https://{s}.tianditu.gov.cn/vec_w/wmts?service=wmts&request=GetTile&version=1.0.0&LAYER=vec&tileMatrixSet=w&TileMatrix={z}&TileRow={y}&TileCol={x}&style=default&format=tiles&tk=",
   cia: "https://{s}.tianditu.gov.cn/cia_w/wmts?service=wmts&request=GetTile&version=1.0.0&LAYER=cia&tileMatrixSet=w&TileMatrix={z}&TileRow={y}&TileCol={x}&style=default&format=tiles&tk=",
