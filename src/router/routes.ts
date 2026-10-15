@@ -18,6 +18,12 @@ export const routes = [
     meta: { title: "地图演示", icon: "◉" },
   },
   {
+    path: "/model-map",
+    name: "modelMap",
+    component: () => import("../views/ModelMap/ModelMap.vue"),
+    meta: { title: "模型地图", icon: "◉" },
+  },
+  {
     path: "/demo-one",
     name: "demoOne",
     component: () => import("../views/DemoOne.vue"),

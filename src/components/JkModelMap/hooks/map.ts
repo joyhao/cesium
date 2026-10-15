@@ -1,0 +1,37 @@
+import { JkBase } from "./base";
+import { JkLayer } from "./layer";
+import { JkFly } from "./fly";
+import { JkCamera } from "./camera";
+
+export class JkMap extends JkBase {
+  layer: JkLayer;
+  fly: JkFly;
+  camera: JkCamera;
+
+
+  private visibilityTimer?: ReturnType<typeof setTimeout>;
+
+  constructor(selector: string) {
+    super(selector);
+
+    this.layer = new JkLayer();
+    this.fly = new JkFly();
+    this.camera = new JkCamera();
+
+
+    // 相机停止更新点位
+    this.camera.on("camera_end", () => {
+    });
+  }
+
+  destroy() {
+
+    this.camera.destroy();
+    super.destroy();
+
+    if (this.visibilityTimer) {
+      clearTimeout(this.visibilityTimer);
+      this.visibilityTimer = undefined;
+    }
+  }
+}

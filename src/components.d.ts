@@ -10,6 +10,8 @@ declare module 'vue' {
     AddPointDialog: typeof import('./components/JkMap/AddPointDialog.vue')['default']
     JkCar: typeof import('./components/JkCar/JkCar.vue')['default']
     JkMap: typeof import('./components/JkMap/JkMap.vue')['default']
+    JkModelMap: typeof import('./components/JkModelMap/JkModelMap.vue')['default']
+    ModelMap: typeof import('./components/ModelMap/ModelMap.vue')['default']
     PointHoverActions: typeof import('./components/JkMap/PointHoverActions.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
