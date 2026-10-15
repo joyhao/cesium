@@ -63,8 +63,10 @@ export class JkLayer extends JkBase {
         console.error(`3D Tiles 加载失败：${tilesetUrls[index]}`, result.reason);
         return;
       }
-
+      if (index === 0) {
       result.value.customShader = this.customShader;
+        
+      }
       this.tilesets.push(result.value);
       this.viewer.scene.primitives.add(result.value);
     });

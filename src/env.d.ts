@@ -8,6 +8,10 @@ declare module "*.glsl" {
 interface AppConfig {
   token: string;
   tilesetUrls: string[];
+  cameraView: {
+    heading: number;
+    pitch: number;
+  };
   vector: string;
   cia: string;
   subdomains: string[];
