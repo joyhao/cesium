@@ -1,11 +1,9 @@
 import { JkBase } from "./base";
 import { JkLayer } from "./layer";
-import { JkFly } from "./fly";
 import { JkCamera } from "./camera";
 
 export class JkMap extends JkBase {
   layer: JkLayer;
-  fly: JkFly;
   camera: JkCamera;
 
 
@@ -15,7 +13,6 @@ export class JkMap extends JkBase {
     super(selector);
 
     this.layer = new JkLayer();
-    this.fly = new JkFly();
     this.camera = new JkCamera();
 
 
@@ -25,7 +22,7 @@ export class JkMap extends JkBase {
   }
 
   destroy() {
-
+    this.layer.destroy();
     this.camera.destroy();
     super.destroy();
 

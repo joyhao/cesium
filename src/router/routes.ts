@@ -2,7 +2,7 @@
 export const routes = [
   {
     path: "/",
-    redirect: "/three-car",
+    redirect: "/model-map",
     meta: { hidden: true },
   },
   {

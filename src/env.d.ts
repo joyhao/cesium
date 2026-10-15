@@ -7,6 +7,7 @@ declare module "*.glsl" {
 
 interface AppConfig {
   token: string;
+  tilesetUrls: string[];
   vector: string;
   cia: string;
   subdomains: string[];
