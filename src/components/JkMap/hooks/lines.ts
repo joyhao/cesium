@@ -53,12 +53,10 @@ export class JkLines extends JkBase {
 
   /**
    * 左键点击处理：仅在连线模式下追加折点。
-   * 连线态调用 stopImmediatePropagation 阻断后续监听（JkPoints 的点位拾取）——本模块
-   * 监听注册早于 JkPoints，故可独占左键，从而把“连线态跳过拾取”逻辑收归此处。
+   * 由 isLine 开关拦截，非连线态不响应。
    */
   onLeftClick(event: CustomEvent<Position>, position: Cartesian2) {
     if (!this.isLine) return;
-    event.stopImmediatePropagation();
     this.addPoint(position);
   }
 
