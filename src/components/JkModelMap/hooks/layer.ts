@@ -97,7 +97,7 @@ export class JkLayer extends JkBase {
       });
     }
     this.tilesets = [];
-    this.customShader?.destroy();
-    this.customShader = undefined;
+    this.glassShader?.destroy();
+    this.glassShader = undefined;
   }
 }
