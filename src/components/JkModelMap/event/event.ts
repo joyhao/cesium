@@ -28,6 +28,7 @@ export enum cEnum {
   point_hover = "point_hover",
   line_hover = "line_hover",
   model_feature_pick = "model_feature_pick",
+  shield_change = "shield_change",
 }
 
 /** 自定义事件名称与事件对象类型的映射 */
@@ -46,4 +47,5 @@ export interface CEvent {
   point_hover: CustomEvent<PointHoverDetail | null>;
   line_hover: CustomEvent<LineHoverDetail | null>;
   model_feature_pick: CustomEvent<ModelFeatureDetail | null>;
+  shield_change: CustomEvent<{ visible: boolean }>;
 }

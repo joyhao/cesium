@@ -17,6 +17,7 @@ export const viewerOptions: Viewer.ConstructorOptions = {
   sceneModePicker: false,
   selectionIndicator: false,
   timeline: false,
+  
 };
 
 export const JkColor = {

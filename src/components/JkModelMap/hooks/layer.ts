@@ -26,12 +26,13 @@ export class JkLayer extends JkBase {
   private glassShader?: CustomShader;
   private modelShader?: CustomShader;
   private pickHandler?: ScreenSpaceEventHandler;
+  private loadPromise: Promise<void>;
 
   constructor() {
     super();
     this.viewer = JkBase.viewer;
     this.init();
-    void this.loadTileset();
+    this.loadPromise = this.loadTileset();
   }
 
   init() {
@@ -78,6 +79,9 @@ export class JkLayer extends JkBase {
         featureId,
       });
     }, ScreenSpaceEventType.LEFT_CLICK);
+
+    // 默认显示地球（球体与贴图）。运行时可用 setGlobeVisible(false) 隐藏。
+    this.setGlobeVisible(true);
   }
 
   async loadTileset() {
@@ -147,6 +151,32 @@ export class JkLayer extends JkBase {
         tileset.boundingSphere.radius * 2,
       ),
     );
+  }
+
+  // 承载高亮着色器的 tileset（index 1 为模型，缺失时退回玻璃 index 0），
+  // 供能量罩等外部模块与模型位置联动。
+  private get modelTileset(): Cesium3DTileset | undefined {
+    return this.tilesets[1] ?? this.tilesets[0];
+  }
+
+  // 模型中心（ECEF 世界坐标），能量罩定位用。
+  get center(): Cartesian3 | undefined {
+    return this.modelTileset?.boundingSphere.center;
+  }
+
+  // 模型包围球半径（米），能量罩尺寸用。
+  get modelRadius(): number {
+    return this.modelTileset?.boundingSphere.radius ?? 0;
+  }
+
+  // 瓦片加载完成时机，供外部在模型就绪后联动。
+  get ready(): Promise<void> {
+    return this.loadPromise;
+  }
+
+  // 显隐地球（球体与贴图）。隐藏后场景只显示 3D Tiles 模型与能量罩。
+  setGlobeVisible(visible: boolean) {
+    this.viewer.scene.globe.show = visible;
   }
 
   destroy() {
