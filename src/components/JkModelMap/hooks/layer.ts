@@ -51,28 +51,19 @@ export class JkLayer extends JkBase {
     this.viewer.imageryLayers.addImageryProvider(baseProvider);
     this.viewer.imageryLayers.addImageryProvider(annotationProvider);
 
-
+    // 禁用 Cesium 默认双击缩放，避免拾取要素时相机自动移动。
+    this.viewer.screenSpaceEventHandler.removeInputAction(
+      ScreenSpaceEventType.LEFT_DOUBLE_CLICK,
+    );
 
     this.pickHandler = new ScreenSpaceEventHandler(this.viewer.scene.canvas);
     this.pickHandler.setInputAction((movement: { position: Cartesian2 }) => {
-      const picked = this.viewer.scene.pick(movement.position);
-      if (picked instanceof Cesium3DTileFeature) {
-        const feature = picked
-        // @ts-ignore
-        const propertyNames = feature.getPropertyNames();
-        const properties = Object.fromEntries(
-          // @ts-ignore
-          propertyNames.map((name) => [name, feature.getProperty(name)]),
-        );
-        if (!propertyNames.length) {
-          const name = feature.getProperty("name") ?? feature.getProperty("Name");
-          if (name != null) properties.name = name;
-        }
-        const name = String(properties.name ?? properties.Name ?? "未命名元素");
-        this.emit("model_feature_pick", { name, properties });
-      } else {
-        this.emit("model_feature_pick", null);
-      }
+      const feature = this.viewer.scene.pick(movement.position);
+      if (!feature) return
+      const propertyName = feature.getProperty("name")
+      this.emit("model_feature_pick", {
+        name: propertyName
+      });
     }, ScreenSpaceEventType.LEFT_CLICK);
   }
 
