@@ -2,12 +2,14 @@ import {
   Cesium3DTileset,
   Cesium3DTileFeature,
   Cartesian2,
+  Cartesian3,
   CustomShader,
   HeadingPitchRange,
   ScreenSpaceEventHandler,
   ScreenSpaceEventType,
   LightingModel,
   CustomShaderTranslucencyMode,
+  UniformType,
   Math as CesiumMath,
   UrlTemplateImageryProvider,
   Viewer,
@@ -58,11 +60,20 @@ export class JkLayer extends JkBase {
 
     this.pickHandler = new ScreenSpaceEventHandler(this.viewer.scene.canvas);
     this.pickHandler.setInputAction((movement: { position: Cartesian2 }) => {
-      const feature = this.viewer.scene.pick(movement.position);
-      if (!feature) return
-      const name = feature.getProperty("name")
+      const picked = this.viewer.scene.pick(movement.position);
+      if (!picked || !(picked instanceof Cesium3DTileFeature)) {
+        // 点击空白：清除 shader 中的高亮要素。
+        if (this.modelShader) this.modelShader.uniforms.uTargetId.value = -1;
+        this.emit("model_feature_pick", null);
+        return;
+      }
+
+      const featureId = picked.featureId;
+      // 把被点击要素的 featureId 写入 shader，触发渐变上色。
+      if (this.modelShader) this.modelShader.uniforms.uTargetId.value = featureId;
       this.emit("model_feature_pick", {
-        name: name
+        name: picked.getProperty("name"),
+        featureId,
       });
     }, ScreenSpaceEventType.LEFT_CLICK);
   }
@@ -77,6 +88,11 @@ export class JkLayer extends JkBase {
     this.modelShader = new CustomShader({
       lightingModel: LightingModel.PBR,
       fragmentShaderText: modelFragmentShader,
+      uniforms: {
+        uTargetId: { type: UniformType.FLOAT, value: -1 },
+        uColorA: { type: UniformType.VEC3, value: new Cartesian3(1.0, 0.1, 0.2) },
+        uColorB: { type: UniformType.VEC3, value: new Cartesian3(0.1, 0.7, 1.0) },
+      },
     });
 
     const results = await Promise.allSettled(

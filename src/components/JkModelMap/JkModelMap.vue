@@ -4,7 +4,8 @@
   <section ref="container" class="container model-map-container">
     <button class="reset-view" type="button" @click="resetView">还原视角</button>
     <div class="feature-info">
-    模型Name：  <strong>{{ modelName}}</strong>
+      <div>模型Name：<strong>{{ feature.name }}</strong></div>
+      <div>Feature ID：<strong>{{ feature.featureId }}</strong></div>
     </div>
     <div class="camera-info">
       <span>高度 {{ info.height.toLocaleString() }} m</span>
@@ -20,7 +21,10 @@
 <script setup lang="ts">
 import { JkMap } from "./hooks/map";
 
-const modelName = ref<string>('');
+const feature = reactive<{ name: string; featureId?: number }>({
+  name: "",
+  featureId: undefined,
+});
 const info = reactive({
   height: 0,
   level: 0,
@@ -57,8 +61,11 @@ onMounted(() => {
   });
 
   map.on("model_feature_pick", (event) => {
-    // @ts-ignore
-    modelName.value = event.detail.name
+    if (!event.detail) {
+      return;
+    }
+    feature.name = event.detail.name;
+    feature.featureId = event.detail.featureId;
   });
 });
 
