@@ -10,6 +10,7 @@ import {
 } from "cesium";
 import { JkBase } from "./base";
 import glassFragmentShader from "../shader/glass.frag.glsl";
+import modelFragmentShader from "../shader/model.frag.glsl";
 
 // 创建并叠加天地图矢量底图和注记图层。
 export class JkLayer extends JkBase {
@@ -17,6 +18,7 @@ export class JkLayer extends JkBase {
   AppConfig = inject<AppConfig>("AppConfig") as AppConfig;
   private tilesets: Cesium3DTileset[] = [];
   private glassShader?: CustomShader;
+  private modelShader?: CustomShader;
 
   constructor() {
     super();
@@ -52,6 +54,10 @@ export class JkLayer extends JkBase {
       translucencyMode: CustomShaderTranslucencyMode.TRANSLUCENT,
       fragmentShaderText: glassFragmentShader,
     });
+    this.modelShader = new CustomShader({
+      lightingModel: LightingModel.PBR,
+      fragmentShaderText: modelFragmentShader,
+    });
 
     const results = await Promise.allSettled(
       tilesetUrls.map((url) => Cesium3DTileset.fromUrl(url)),
@@ -68,7 +74,7 @@ export class JkLayer extends JkBase {
       if (index === 0) {
         result.value.customShader = this.glassShader;
       } else if (index === 1) {
-        //   result.value.customShader = this.customShader;
+        result.value.customShader = this.modelShader;
       }
       this.tilesets.push(result.value);
       this.viewer.scene.primitives.add(result.value);
@@ -99,5 +105,7 @@ export class JkLayer extends JkBase {
     this.tilesets = [];
     this.glassShader?.destroy();
     this.glassShader = undefined;
+    this.modelShader?.destroy();
+    this.modelShader = undefined;
   }
 }
