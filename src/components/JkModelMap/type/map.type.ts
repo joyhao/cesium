@@ -155,3 +155,8 @@ export interface LineHoverDetail {
   y: number;
   name: string;
 }
+
+export interface ModelFeatureDetail {
+  name: string;
+  properties: Record<string, unknown>;
+}

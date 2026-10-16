@@ -3,6 +3,16 @@
 <template>
   <section ref="container" class="container model-map-container">
     <button class="reset-view" type="button" @click="resetView">还原视角</button>
+    <div v-if="selectedFeature" class="feature-info">
+      <button class="feature-close" type="button" aria-label="关闭" @click="selectedFeature = null">×</button>
+      <strong>{{ selectedFeature.name }}</strong>
+      <dl>
+        <template v-for="(value, key) in selectedFeature.properties" :key="key">
+          <dt>{{ key }}</dt>
+          <dd>{{ formatProperty(value) }}</dd>
+        </template>
+      </dl>
+    </div>
     <div class="camera-info">
       <span>高度 {{ info.height.toLocaleString() }} m</span>
       <span>层级 {{ info.level }}</span>
@@ -16,7 +26,9 @@
 
 <script setup lang="ts">
 import { JkMap } from "./hooks/map";
+import type { ModelFeatureDetail } from "./type/map.type";
 
+const selectedFeature = ref<ModelFeatureDetail | null>(null);
 const info = reactive({
   height: 0,
   level: 0,
@@ -32,6 +44,11 @@ function resetView() {
   map?.resetView();
 }
 
+function formatProperty(value: unknown) {
+  if (value == null) return "";
+  return typeof value === "object" ? JSON.stringify(value) : String(value);
+}
+
 onMounted(() => {
   map = new JkMap(".model-map-container");
 
@@ -45,6 +62,10 @@ onMounted(() => {
 
   map.on("fps_change", (event) => {
     info.fps = event.detail.fps;
+  });
+
+  map.on("model_feature_pick", (event) => {
+    selectedFeature.value = event.detail;
   });
 });
 

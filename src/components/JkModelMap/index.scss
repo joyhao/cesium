@@ -25,6 +25,56 @@
   }
 }
 
+.feature-info {
+  position: absolute;
+  z-index: 3;
+  top: 72px;
+  right: 16px;
+  width: min(320px, calc(100% - 32px));
+  max-height: 50%;
+  overflow: auto;
+  padding: 16px;
+  border: 1px solid rgba(126, 191, 230, 0.35);
+  border-radius: 8px;
+  background: rgba(5, 14, 25, 0.9);
+  color: #d7e9f8;
+  backdrop-filter: blur(8px);
+
+  strong {
+    display: block;
+    padding-right: 24px;
+    overflow-wrap: anywhere;
+  }
+
+  dl {
+    display: grid;
+    grid-template-columns: minmax(80px, auto) 1fr;
+    gap: 8px 12px;
+    margin: 12px 0 0;
+    font-size: 12px;
+  }
+
+  dt {
+    color: #8fa9bf;
+  }
+
+  dd {
+    margin: 0;
+    overflow-wrap: anywhere;
+  }
+}
+
+.feature-close {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font-size: 20px;
+  cursor: pointer;
+}
+
 .camera-info {
   position: absolute;
   z-index: 1;

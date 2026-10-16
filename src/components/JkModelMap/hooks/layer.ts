@@ -1,7 +1,11 @@
 import {
   Cesium3DTileset,
+  Cesium3DTileFeature,
+  Cartesian2,
   CustomShader,
   HeadingPitchRange,
+  ScreenSpaceEventHandler,
+  ScreenSpaceEventType,
   LightingModel,
   CustomShaderTranslucencyMode,
   Math as CesiumMath,
@@ -19,6 +23,7 @@ export class JkLayer extends JkBase {
   private tilesets: Cesium3DTileset[] = [];
   private glassShader?: CustomShader;
   private modelShader?: CustomShader;
+  private pickHandler?: ScreenSpaceEventHandler;
 
   constructor() {
     super();
@@ -45,6 +50,30 @@ export class JkLayer extends JkBase {
 
     this.viewer.imageryLayers.addImageryProvider(baseProvider);
     this.viewer.imageryLayers.addImageryProvider(annotationProvider);
+
+
+
+    this.pickHandler = new ScreenSpaceEventHandler(this.viewer.scene.canvas);
+    this.pickHandler.setInputAction((movement: { position: Cartesian2 }) => {
+      const picked = this.viewer.scene.pick(movement.position);
+      if (picked instanceof Cesium3DTileFeature) {
+        const feature = picked
+        // @ts-ignore
+        const propertyNames = feature.getPropertyNames();
+        const properties = Object.fromEntries(
+          // @ts-ignore
+          propertyNames.map((name) => [name, feature.getProperty(name)]),
+        );
+        if (!propertyNames.length) {
+          const name = feature.getProperty("name") ?? feature.getProperty("Name");
+          if (name != null) properties.name = name;
+        }
+        const name = String(properties.name ?? properties.Name ?? "未命名元素");
+        this.emit("model_feature_pick", { name, properties });
+      } else {
+        this.emit("model_feature_pick", null);
+      }
+    }, ScreenSpaceEventType.LEFT_CLICK);
   }
 
   async loadTileset() {
@@ -97,6 +126,8 @@ export class JkLayer extends JkBase {
   }
 
   destroy() {
+    this.pickHandler?.destroy();
+    this.pickHandler = undefined;
     if (!this.viewer.isDestroyed()) {
       this.tilesets.forEach((tileset) => {
         this.viewer.scene.primitives.remove(tileset);

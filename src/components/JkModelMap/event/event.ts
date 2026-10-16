@@ -6,6 +6,7 @@ import type {
   LineChangeDetail,
   LineHoverDetail,
   PointHoverDetail,
+  ModelFeatureDetail,
   Position,
   PointsChangeDetail,
   MovePosition,
@@ -26,6 +27,7 @@ export enum cEnum {
   add_point_request = "add_point_request",
   point_hover = "point_hover",
   line_hover = "line_hover",
+  model_feature_pick = "model_feature_pick",
 }
 
 /** 自定义事件名称与事件对象类型的映射 */
@@ -43,4 +45,5 @@ export interface CEvent {
   add_point_request: CustomEvent<AddPointRequestDetail>;
   point_hover: CustomEvent<PointHoverDetail | null>;
   line_hover: CustomEvent<LineHoverDetail | null>;
+  model_feature_pick: CustomEvent<ModelFeatureDetail | null>;
 }
