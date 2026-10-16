@@ -16,8 +16,11 @@ void fragmentMain(FragmentInput fsInput, inout czm_modelMaterial material) {
   // 命中目标 featureId 时，用 A->B 渐变覆盖（基于局部高度做渐变）。
   if (uTargetId >= 0.0 && abs(float(fsInput.featureIds.featureId_0) - uTargetId) < 0.5) {
     float t = 0.5 + 0.5 * sin(fsInput.attributes.positionMC.z * 0.15);
-    material.diffuse = mix(uColorA, uColorB, t);
-    material.emissive = material.diffuse * 0.35;
+    vec3 hiColor = mix(uColorA, uColorB, t);
+    material.diffuse = hiColor;
+    // 提高自发光占比，让高亮要素明显发亮、不被场景光照压暗。
+    material.emissive = hiColor * 0.8;
+    material.roughness = 0.4;
     material.alpha = 1.0;
   }
 }

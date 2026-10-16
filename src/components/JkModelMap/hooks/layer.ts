@@ -63,14 +63,14 @@ export class JkLayer extends JkBase {
       const picked = this.viewer.scene.pick(movement.position);
       if (!picked || !(picked instanceof Cesium3DTileFeature)) {
         // 点击空白：清除 shader 中的高亮要素。
-        if (this.modelShader) this.modelShader.uniforms.uTargetId.value = -1;
+       // if (this.modelShader) this.modelShader.uniforms.uTargetId.value = -1;
         this.emit("model_feature_pick", null);
         return;
       }
 
       const featureId = picked.featureId;
       // 把被点击要素的 featureId 写入 shader，触发渐变上色。
-      if (this.modelShader) this.modelShader.uniforms.uTargetId.value = featureId;
+   //   if (this.modelShader) this.modelShader.uniforms.uTargetId.value = featureId;
       this.emit("model_feature_pick", {
         name: picked.getProperty("name"),
         featureId,
@@ -84,15 +84,6 @@ export class JkLayer extends JkBase {
       lightingModel: LightingModel.PBR,
       translucencyMode: CustomShaderTranslucencyMode.TRANSLUCENT,
       fragmentShaderText: glassFragmentShader,
-    });
-    this.modelShader = new CustomShader({
-      lightingModel: LightingModel.PBR,
-      fragmentShaderText: modelFragmentShader,
-      uniforms: {
-        uTargetId: { type: UniformType.FLOAT, value: -1 },
-        uColorA: { type: UniformType.VEC3, value: new Cartesian3(1.0, 0.1, 0.2) },
-        uColorB: { type: UniformType.VEC3, value: new Cartesian3(0.1, 0.7, 1.0) },
-      },
     });
 
     const results = await Promise.allSettled(
@@ -110,7 +101,29 @@ export class JkLayer extends JkBase {
       if (index === 0) {
         result.value.customShader = this.glassShader;
       } else if (index === 1) {
-        result.value.customShader = this.modelShader;
+        // 等 Cesium 完成该 tileset 的 featureId 计算后再创建并绑定着色器，
+        // 避免编译时 featureId 通道尚未就绪导致 fsInput.featureIds.featureId_0 报错。
+        const attachModelShader = () => {
+          if (!this.modelShader) {
+            this.modelShader = new CustomShader({
+              lightingModel: LightingModel.PBR,
+              fragmentShaderText: modelFragmentShader,
+              uniforms: {
+                uTargetId: { type: UniformType.FLOAT, value: -1 },
+                uColorA: { type: UniformType.VEC3, value: new Cartesian3(1.0, 0.1, 0.8) },
+                uColorB: { type: UniformType.VEC3, value: new Cartesian3(0.1, 0.7, 1.0) },
+              },
+            });
+          }
+          result.value.customShader = this.modelShader;
+          // 加载完成后默认高亮 featureId 为 22 的要素（红→青蓝渐变）。
+          this.modelShader.uniforms.uTargetId.value = 22;
+        };
+        if (result.value.tilesLoaded) {
+          attachModelShader();
+        } else {
+          result.value.allTilesLoaded.addEventListener(attachModelShader);
+        }
       }
       this.tilesets.push(result.value);
       this.viewer.scene.primitives.add(result.value);
