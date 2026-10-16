@@ -62,15 +62,17 @@ export class JkLayer extends JkBase {
     this.pickHandler.setInputAction((movement: { position: Cartesian2 }) => {
       const picked = this.viewer.scene.pick(movement.position);
       if (!picked || !(picked instanceof Cesium3DTileFeature)) {
-        // 点击空白：清除 shader 中的高亮要素。
-       // if (this.modelShader) this.modelShader.uniforms.uTargetId.value = -1;
+        if (this.modelShader) {
+          this.modelShader.uniforms.uTargetId.value = [22, 16, 21, -1, -1, -1, -1, -1];
+        }
         this.emit("model_feature_pick", null);
         return;
       }
 
       const featureId = picked.featureId;
-      // 把被点击要素的 featureId 写入 shader，触发渐变上色。
-   //   if (this.modelShader) this.modelShader.uniforms.uTargetId.value = featureId;
+      if (this.modelShader) {
+        this.modelShader.uniforms.uTargetId.value = [22, 16, 21, featureId, -1, -1, -1, -1];
+      }
       this.emit("model_feature_pick", {
         name: picked.getProperty("name"),
         featureId,
@@ -109,15 +111,17 @@ export class JkLayer extends JkBase {
               lightingModel: LightingModel.PBR,
               fragmentShaderText: modelFragmentShader,
               uniforms: {
-                uTargetId: { type: UniformType.FLOAT, value: -1 },
-                uColorA: { type: UniformType.VEC3, value: new Cartesian3(1.0, 0.1, 0.8) },
-                uColorB: { type: UniformType.VEC3, value: new Cartesian3(0.1, 0.7, 1.0) },
+                uTargetId: {
+                  type: "float[8]" as unknown as UniformType,
+                  value: new Float32Array(8).fill(-1),
+                },
+                uColorA: { type: UniformType.VEC3, value: new Cartesian3(0.65, 0.35, 1.0) },
+                uColorB: { type: UniformType.VEC3, value: new Cartesian3(0.2, 0.85, 1.0) },
               },
             });
           }
           result.value.customShader = this.modelShader;
-          // 加载完成后默认高亮 featureId 为 22 的要素（红→青蓝渐变）。
-          this.modelShader.uniforms.uTargetId.value = 22;
+          this.modelShader.uniforms.uTargetId.value = [22, 16, 21, -1, -1, -1, -1, -1];
         };
         if (result.value.tilesLoaded) {
           attachModelShader();
