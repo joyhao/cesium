@@ -180,20 +180,19 @@ export class JkLayer extends JkBase {
     );
   }
 
-  // 切换视角：在默认视角与备选视角之间来回切换，保持相同观察距离。
+
   switchView() {
     const tileset = this.tilesets[0];
     if (!tileset) return;
 
-
-    this.viewer.zoomTo(
-      tileset,
-      new HeadingPitchRange(
+    void this.viewer.flyTo(tileset, {
+      offset: new HeadingPitchRange(
         CesiumMath.toRadians(76.8),
         CesiumMath.toRadians(-35.8),
-        tileset.boundingSphere.radius * 2,
+        tileset.boundingSphere.radius * 1.5,
       ),
-    );
+      duration: 1.5,
+    });
   }
 
 
