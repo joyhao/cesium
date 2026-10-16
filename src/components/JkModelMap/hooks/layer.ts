@@ -60,9 +60,9 @@ export class JkLayer extends JkBase {
     this.pickHandler.setInputAction((movement: { position: Cartesian2 }) => {
       const feature = this.viewer.scene.pick(movement.position);
       if (!feature) return
-      const propertyName = feature.getProperty("name")
+      const name = feature.getProperty("name")
       this.emit("model_feature_pick", {
-        name: propertyName
+        name: name
       });
     }, ScreenSpaceEventType.LEFT_CLICK);
   }

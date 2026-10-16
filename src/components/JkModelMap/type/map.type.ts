@@ -158,5 +158,4 @@ export interface LineHoverDetail {
 
 export interface ModelFeatureDetail {
   name: string;
-  properties: Record<string, unknown>;
 }

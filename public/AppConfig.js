@@ -5,8 +5,8 @@ window.AppConfig = {
     "http://localhost:9528/static/zibobeizuoyequ-manual/tileset.json",
   ],
   cameraView: {
-    heading: 99.4,
-    pitch: -35.8,
+    heading: 178.1,
+    pitch: -35.6,
   },
   vector:
     "https://{s}.tianditu.gov.cn/vec_w/wmts?service=wmts&request=GetTile&version=1.0.0&LAYER=vec&tileMatrixSet=w&TileMatrix={z}&TileRow={y}&TileCol={x}&style=default&format=tiles&tk=",
