@@ -11,6 +11,7 @@ export class JkMap extends JkBase {
 
 
   private visibilityTimer?: ReturnType<typeof setTimeout>;
+  private shieldHidden = false;
 
   constructor(selector: string) {
     super(selector);
@@ -30,13 +31,35 @@ export class JkMap extends JkBase {
           const carto = Cartographic.fromCartesian(c);
           const ground = Cartesian3.fromRadians(carto.longitude, carto.latitude, 0);
           this.shield.show(ground, { radii: [r * k, r * k, (carto.height + r) * k] });
+          // 依据当前相机距离决定初始显隐。
+          this.updateShieldVisibility();
         }
       })
       .catch(() => {});
 
-    // 相机停止更新点位
-    this.camera.on("camera_end", () => {
+    // 相机移动时按距离切换能量罩：贴近模型则隐藏，拉远则显示。
+    this.camera.on("camera_change", () => {
+      this.updateShieldVisibility();
     });
+  }
+
+  // 相机贴近模型时隐藏能量罩避免遮挡，拉远则显示；带迟滞避免临界抖动。
+  private updateShieldVisibility() {
+    const c = this.layer.center;
+    const r = this.layer.modelRadius;
+    if (!c || r <= 0) return;
+    const dist = Cartesian3.distance(this.camera.viewer.camera.positionWC, c);
+    if (dist < r * 1.5) {
+      if (!this.shieldHidden) {
+        this.shield.hide();
+        this.shieldHidden = true;
+      }
+    } else if (dist > r * 2.0) {
+      if (this.shieldHidden) {
+        this.shield.showAgain();
+        this.shieldHidden = false;
+      }
+    }
   }
 
   resetView() {
