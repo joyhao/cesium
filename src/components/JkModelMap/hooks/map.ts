@@ -66,6 +66,10 @@ export class JkMap extends JkBase {
     this.layer.resetView();
   }
 
+  switchView() {
+    this.layer.switchView();
+  }
+
   destroy() {
     this.layer.destroy();
     this.camera.destroy();

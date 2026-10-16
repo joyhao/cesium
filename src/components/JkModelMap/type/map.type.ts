@@ -77,6 +77,7 @@ export interface AppConfig {
     heading: number;
     pitch: number;
   };
+
   vector: string;
   cia: string;
   subdomains: string[];

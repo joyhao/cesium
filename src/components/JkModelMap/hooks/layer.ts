@@ -28,12 +28,37 @@ export class JkLayer extends JkBase {
   private pickHandler?: ScreenSpaceEventHandler;
   private loadPromise: Promise<void>;
 
+
+  // 承载高亮着色器的 tileset（index 1 为模型，缺失时退回玻璃 index 0），
+  // 供能量罩等外部模块与模型位置联动。
+  get modelTileset(): Cesium3DTileset | undefined {
+    return this.tilesets[1] ?? this.tilesets[0];
+  }
+
+  // 模型中心（ECEF 世界坐标），能量罩定位用。
+  get center(): Cartesian3 | undefined {
+    return this.modelTileset?.boundingSphere.center;
+  }
+
+  // 模型包围球半径（米），能量罩尺寸用。
+  get modelRadius(): number {
+    return this.modelTileset?.boundingSphere.radius ?? 0;
+  }
+
+  // 瓦片加载完成时机，供外部在模型就绪后联动。
+  get ready(): Promise<void> {
+    return this.loadPromise;
+  }
+
+
   constructor() {
     super();
     this.viewer = JkBase.viewer;
     this.init();
     this.loadPromise = this.loadTileset();
   }
+
+
 
   init() {
     const { token, vector, subdomains, cia } = this.AppConfig;
@@ -140,7 +165,9 @@ export class JkLayer extends JkBase {
     this.resetView();
   }
 
+
   resetView() {
+
     const tileset = this.tilesets[0];
 
     void this.viewer.zoomTo(
@@ -153,26 +180,23 @@ export class JkLayer extends JkBase {
     );
   }
 
-  // 承载高亮着色器的 tileset（index 1 为模型，缺失时退回玻璃 index 0），
-  // 供能量罩等外部模块与模型位置联动。
-  private get modelTileset(): Cesium3DTileset | undefined {
-    return this.tilesets[1] ?? this.tilesets[0];
+  // 切换视角：在默认视角与备选视角之间来回切换，保持相同观察距离。
+  switchView() {
+    const tileset = this.tilesets[0];
+    if (!tileset) return;
+
+
+    this.viewer.zoomTo(
+      tileset,
+      new HeadingPitchRange(
+        CesiumMath.toRadians(76.8),
+        CesiumMath.toRadians(-35.8),
+        tileset.boundingSphere.radius * 2,
+      ),
+    );
   }
 
-  // 模型中心（ECEF 世界坐标），能量罩定位用。
-  get center(): Cartesian3 | undefined {
-    return this.modelTileset?.boundingSphere.center;
-  }
 
-  // 模型包围球半径（米），能量罩尺寸用。
-  get modelRadius(): number {
-    return this.modelTileset?.boundingSphere.radius ?? 0;
-  }
-
-  // 瓦片加载完成时机，供外部在模型就绪后联动。
-  get ready(): Promise<void> {
-    return this.loadPromise;
-  }
 
   // 显隐地球（球体与贴图）。隐藏后场景只显示 3D Tiles 模型与能量罩。
   setGlobeVisible(visible: boolean) {

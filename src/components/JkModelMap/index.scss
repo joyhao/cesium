@@ -4,11 +4,11 @@
   height: 100%;
 }
 
-.reset-view {
+.reset-view,
+.switch-view {
   position: absolute;
   z-index: 2;
   top: 16px;
-  left: 16px;
   padding: 10px 14px;
   border: 1px solid rgba(126, 191, 230, 0.4);
   border-radius: 8px;
@@ -23,6 +23,14 @@
     border-color: #4ea1ff;
     background: rgba(20, 50, 78, 0.92);
   }
+}
+
+.reset-view {
+  left: 16px;
+}
+
+.switch-view {
+  left: 106px;
 }
 
 .feature-info {

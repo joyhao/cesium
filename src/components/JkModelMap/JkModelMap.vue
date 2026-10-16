@@ -3,6 +3,7 @@
 <template>
   <section ref="container" class="container model-map-container">
     <button class="reset-view" type="button" @click="resetView">还原视角</button>
+    <button class="switch-view" type="button" @click="switchView">切换视角</button>
     <div class="feature-info">
       <div>模型Name：<strong>{{ feature.name }}</strong></div>
       <div>Feature ID：<strong>{{ feature.featureId }}</strong></div>
@@ -38,6 +39,10 @@ let map: JkMap;
 
 function resetView() {
   map?.resetView();
+}
+
+function switchView() {
+  map?.switchView();
 }
 
 function formatProperty(value: unknown) {
