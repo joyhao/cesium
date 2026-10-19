@@ -3,11 +3,13 @@ import { JkBase } from "./base";
 import { JkLayer } from "./layer";
 import { JkCamera } from "./camera";
 import { JkEnergyShield } from "./energyShield";
+import { JkPlane } from "./plane";
 
 export class JkMap extends JkBase {
   layer: JkLayer;
   camera: JkCamera;
   shield: JkEnergyShield;
+  readonly plane: JkPlane;
 
 
   private visibilityTimer?: ReturnType<typeof setTimeout>;
@@ -18,6 +20,7 @@ export class JkMap extends JkBase {
     super(selector);
 
     this.layer = new JkLayer();
+    this.plane = new JkPlane();
     this.camera = new JkCamera();
     this.shield = new JkEnergyShield();
 
@@ -73,6 +76,7 @@ export class JkMap extends JkBase {
   destroy() {
     if (this.destroyed) return;
     this.destroyed = true;
+    this.plane.destroy();
     this.camera.destroy();
     this.shield.destroy();
     this.layer.destroy();

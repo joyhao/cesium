@@ -8,6 +8,12 @@ export class JkPaths extends JkBase {
   private labels = new Map<number, string>();
   private activePath?: JkPath;
   private nextId = 1;
+  private visible = true;
+
+  setVisible(visible: boolean) {
+    this.visible = visible;
+    this.paths.forEach((path) => path.setVisible(visible));
+  }
 
   loadPaths(data: PathData[]) {
     const existing = new Map(this.paths.map((path) => [path.id, path]));
@@ -21,10 +27,12 @@ export class JkPaths extends JkBase {
     this.paths = data.map((record) => {
       const path = existing.get(record.id) ?? new JkPath(record.id);
       path.setPoints(record.points);
+      path.setVisible(this.visible);
       this.labels.set(record.id, record.label);
       this.nextId = Math.max(this.nextId, record.id + 1);
       return path;
     });
+    this.emit("model_paths_loaded", { paths: this.getPaths() });
   }
 
   getPaths(): PathData[] {
@@ -41,6 +49,7 @@ export class JkPaths extends JkBase {
 
   createPath() {
     const path = new JkPath(this.nextId++);
+    path.setVisible(this.visible);
     this.paths.push(path);
     this.labels.set(path.id, `路径 ${path.id}`);
     this.activePath = path;

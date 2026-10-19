@@ -119,6 +119,16 @@ export class JkPath extends JkBase {
     });
   }
 
+  private visible = true;
+
+  setVisible(visible: boolean) {
+    if (this.destroyed || this.viewer.isDestroyed()) return;
+    this.visible = visible;
+    this.points.show = visible;
+    if (this.primitive) this.primitive.show = visible;
+    this.viewer.scene.requestRender();
+  }
+
   private updateLine() {
     const primitive = this.builder.toPrimitive(false);
     if (!primitive) {
@@ -127,6 +137,7 @@ export class JkPath extends JkBase {
       return;
     }
 
+    primitive.show = this.visible;
     this.viewer.scene.primitives.add(primitive);
     if (this.primitive) this.viewer.scene.primitives.remove(this.primitive);
     this.primitive = primitive;

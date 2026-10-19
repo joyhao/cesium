@@ -19,7 +19,6 @@ import {
 import { JkBase } from "./base";
 import glassFragmentShader from "../shader/glass.frag.glsl";
 import modelFragmentShader from "../shader/model.frag.glsl";
-import { JkPlane } from "./plane";
 
 // 创建并叠加天地图矢量底图和注记图层。
 export class JkLayer extends JkBase {
@@ -31,7 +30,6 @@ export class JkLayer extends JkBase {
   private pickHandler?: ScreenSpaceEventHandler;
   private loadPromise: Promise<void>;
   private destroyed = false;
-  plane: JkPlane;
 
   // 承载高亮着色器的 tileset（index 1 为模型，缺失时退回玻璃 index 0），
   // 供能量罩等外部模块与模型位置联动。
@@ -58,7 +56,6 @@ export class JkLayer extends JkBase {
     super();
     this.viewer = JkBase.viewer;
     this.init();
-    this.plane = new JkPlane();
     this.loadPromise = this.loadTileset();
   }
 
@@ -188,7 +185,7 @@ export class JkLayer extends JkBase {
         return;
       }
       if (index === 0) {
-   //  result.value.customShader = this.glassShader;
+    result.value.customShader = this.glassShader;
       } else if (index === 1) {
         // 等 Cesium 完成该 tileset 的 featureId 计算后再创建并绑定着色器，
         // 避免编译时 featureId 通道尚未就绪导致 fsInput.featureIds.featureId_0 报错。
@@ -267,7 +264,6 @@ export class JkLayer extends JkBase {
     if (this.destroyed) return;
     this.destroyed = true;
     this.offAllListeners();
-    this.plane.destroy();
     this.pickHandler?.destroy();
     this.pickHandler = undefined;
     if (!this.viewer.isDestroyed()) {

@@ -54,6 +54,25 @@
     font-size: 14px;
   }
 
+  .car-speed {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+    font-size: 13px;
+
+    select {
+      flex: 1;
+      min-width: 0;
+      padding: 6px;
+      border: 1px solid rgba(126, 191, 230, 0.4);
+      border-radius: 5px;
+      background: #101f30;
+      color: #d7e9f8;
+      cursor: pointer;
+    }
+  }
+
   p, .path-description span, h3 span {
     color: #8fa9bf;
     font-size: 12px;

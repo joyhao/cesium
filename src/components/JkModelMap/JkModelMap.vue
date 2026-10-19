@@ -13,6 +13,22 @@
     <button class="switch-view" type="button" @click="switchView">切换视角</button>
     <aside class="path-list" aria-label="已保存路径" @keydown.stop>
       <h3>路径列表 <span>{{ pathsStore.paths.length }}</span></h3>
+      <button type="button" :aria-pressed="!pathsVisible" @click="togglePathsVisible">
+        {{ pathsVisible ? '隐藏路径' : '显示路径' }}
+      </button>
+      <label class="car-speed">
+        车速
+        <select v-model.number="carSpeed" @change="changeCarSpeed">
+          <option :value="0">暂停</option>
+          <option :value="2">2 米/秒（7.2 km/h）</option>
+          <option :value="5">5 米/秒（18 km/h）</option>
+          <option :value="10">10 米/秒（36 km/h）</option>
+          <option :value="20">20 米/秒（72 km/h）</option>
+          <option :value="50">50 米/秒（180 km/h）</option>
+          <option :value="100">100 米/秒（360 km/h）</option>
+          <option :value="200">200 米/秒（720 km/h）</option>
+        </select>
+      </label>
       <p v-if="!pathsStore.paths.length">暂无路径，绘制后自动保存</p>
       <ul v-else>
         <li v-for="path in pathsStore.paths" :key="path.id">
@@ -49,6 +65,18 @@ import { usePaths } from "../../stores/paths";
 import { watch, type WatchStopHandle } from "vue";
 
 const pathsStore = usePaths();
+const carSpeed = ref(20);
+const pathsVisible = ref(true);
+
+function togglePathsVisible() {
+  if (!map) return;
+  pathsVisible.value = !pathsVisible.value;
+  map.plane.paths.setVisible(pathsVisible.value);
+}
+
+function changeCarSpeed() {
+  map?.plane.cars.setSpeed(carSpeed.value);
+}
 let stopPathsWatch: WatchStopHandle | undefined;
 let syncingPaths = false;
 
@@ -82,7 +110,7 @@ function handleKeydown(event: KeyboardEvent) {
   const target = event.target;
   if (target instanceof HTMLElement && target.closest("input, textarea, select, [contenteditable]")) return;
   if (event.isComposing || !(event.ctrlKey || event.metaKey) || event.shiftKey || event.altKey || event.key.toLowerCase() !== "z") return;
-  if (map?.layer.plane.paths.undo()) event.preventDefault();
+  if (map?.plane.paths.undo()) event.preventDefault();
 }
 
 // 恢复配置中的初始观察视角。
@@ -104,7 +132,7 @@ function formatProperty(value: unknown) {
 // DOM 就绪后创建地图，并监听相机、帧率和模型构件选择事件。
 onMounted(() => {
   map = new JkMap(".model-map-container");
-  map.layer.plane.paths.loadPaths(pathsStore.paths);
+  map.plane.paths.loadPaths(pathsStore.paths);
   map.on("model_paths_change", ({ detail }) => {
     syncingPaths = true;
     try {
@@ -116,7 +144,7 @@ onMounted(() => {
   stopPathsWatch = watch(
     () => pathsStore.paths,
     (paths) => {
-      if (!syncingPaths) map.layer.plane.paths.loadPaths(paths);
+      if (!syncingPaths) map.plane.paths.loadPaths(paths);
     },
     { deep: true, flush: "sync" },
   );

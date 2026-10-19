@@ -33,6 +33,7 @@ export enum cEnum {
   model_feature_pick = "model_feature_pick",
   model_path_end = "model_path_end",
   model_paths_change = "model_paths_change",
+  model_paths_loaded = "model_paths_loaded",
   shield_change = "shield_change",
 }
 
@@ -60,5 +61,6 @@ export interface CEvent {
   model_feature_pick: CustomEvent<ModelFeatureDetail | null>;
   model_path_end: CustomEvent<{}>;
   model_paths_change: CustomEvent<{ paths: PathData[] }>;
+  model_paths_loaded: CustomEvent<{ paths: PathData[] }>;
   shield_change: CustomEvent<{ visible: boolean }>;
 }
