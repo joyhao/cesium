@@ -189,7 +189,7 @@ export class JkLayer extends JkBase {
         return;
       }
       if (index === 0) {
-        // result.value.customShader = this.glassShader;
+        result.value.customShader = this.glassShader;
       } else if (index === 1) {
         // 等 Cesium 完成该 tileset 的 featureId 计算后再创建并绑定着色器，
         // 避免编译时 featureId 通道尚未就绪导致 fsInput.featureIds.featureId_0 报错。
