@@ -1,46 +1,65 @@
 import {
-  BillboardCollection,
   Cartesian3,
-  HorizontalOrigin,
+  Cartographic,
+  CircleGeometry,
+  EllipsoidSurfaceAppearance,
+  GeometryInstance,
+  Material,
   Primitive,
-  VerticalOrigin,
+  PrimitiveCollection,
   Viewer,
 } from "cesium";
 import { JkBase } from "./base";
 import { PolylineBuilder } from "@com/JkMap/shape/polyline";
+import pathMarkerShader from "../shader/pathMarker.frag.glsl";
 
 export class JkPath extends JkBase {
   readonly viewer: Viewer;
   private builder = new PolylineBuilder();
-  private points: BillboardCollection;
-  private dotImage: HTMLCanvasElement;
+  private points: PrimitiveCollection;
   private primitive?: Primitive;
   private destroyed = false;
 
   constructor() {
     super();
     this.viewer = JkBase.viewer;
-    this.dotImage = this.createDotImage();
-    this.points = this.viewer.scene.primitives.add(new BillboardCollection());
+    this.builder.surfaceWidthMeters = 0.3;
+    this.builder.ellipsoid = this.viewer.scene.globe.ellipsoid;
+    this.points = this.viewer.scene.primitives.add(new PrimitiveCollection());
   }
 
-  private createDotImage(): HTMLCanvasElement {
-    const size = 32;
-    const canvas = document.createElement("canvas");
-    canvas.width = size;
-    canvas.height = size;
-    const ctx = canvas.getContext("2d")!;
-    ctx.clearRect(0, 0, size, size);
-    ctx.beginPath();
-    ctx.arc(size / 2, size / 2, 10, 0, Math.PI * 2);
-    ctx.lineWidth = 2;
-    ctx.strokeStyle = "white";
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.arc(size / 2, size / 2, 8, 0, Math.PI * 2);
-    ctx.fillStyle = "cyan";
-    ctx.fill();
-    return canvas;
+  private addMarker(position: Cartesian3) {
+    const ellipsoid = this.viewer.scene.globe.ellipsoid;
+    const height = Cartographic.fromCartesian(position, ellipsoid).height;
+    this.points.add(new Primitive({
+      geometryInstances: new GeometryInstance({
+        geometry: new CircleGeometry({
+          center: position,
+          radius: 0.25,
+          height,
+          ellipsoid,
+          vertexFormat: EllipsoidSurfaceAppearance.VERTEX_FORMAT,
+        }),
+      }),
+      appearance: new EllipsoidSurfaceAppearance({
+        aboveGround: true,
+        material: new Material({
+          fabric: {
+            type: "JkPathMarker",
+            source: pathMarkerShader,
+          },
+        }),
+        flat: true,
+        translucent: false,
+        renderState: {
+          depthTest: { enabled: false },
+          depthMask: false,
+          cull: { enabled: false },
+        },
+      }),
+      asynchronous: false,
+      allowPicking: false,
+    }));
   }
 
   addPosition(position: Cartesian3) {
@@ -51,14 +70,7 @@ export class JkPath extends JkBase {
       return;
 
     this.builder.addPoint(position);
-    this.points.add({
-      position,
-      image: this.dotImage,
-      scale: 0.5,
-      horizontalOrigin: HorizontalOrigin.CENTER,
-      verticalOrigin: VerticalOrigin.CENTER,
-      disableDepthTestDistance: Number.POSITIVE_INFINITY,
-    });
+    this.addMarker(position);
     this.updateLine();
     this.viewer.scene.requestRender();
   }

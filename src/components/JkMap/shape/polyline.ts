@@ -5,6 +5,7 @@ import {
   BoundingSphere,
   Cartesian3,
   ComponentDatatype,
+  Ellipsoid,
   Geometry,
   GeometryAttribute,
   GeometryAttributes,
@@ -102,6 +103,8 @@ export class PolylineBuilder {
   stepsPerSegment = 16;
   /** 渲染模式：true=曲线(Catmull-Rom)，false=折线(直线段)。运行时可切换。 */
   curved = true;
+  surfaceWidthMeters = 0;
+  ellipsoid = Ellipsoid.WGS84;
 
   constructor(capacity = DEFAULT_CAPACITY_SEGMENTS) {
     this.capacity = capacity;
@@ -210,10 +213,29 @@ export class PolylineBuilder {
         const vertex = firstVertex + corner;
         const isEnd = corner >= 2;
         const current = isEnd ? end : start;
+        const expanded = Cartesian3.clone(current);
+        if (this.surfaceWidthMeters > 0) {
+          const normal = this.ellipsoid.geodeticSurfaceNormal(current, new Cartesian3());
+          const direction = Cartesian3.subtract(
+            isEnd ? next : end,
+            isEnd ? start : previous,
+            new Cartesian3(),
+          );
+          const side = Cartesian3.cross(normal, direction, new Cartesian3());
+          if (Cartesian3.magnitudeSquared(side) > 1e-12) {
+            Cartesian3.normalize(side, side);
+            Cartesian3.multiplyByScalar(
+              side,
+              (corner % 2 === 0 ? -1 : 1) * this.surfaceWidthMeters * 0.5,
+              side,
+            );
+            Cartesian3.add(current, side, expanded);
+          }
+        }
         const base = vertex * 3;
-        b.currentPositions[base] = current.x;
-        b.currentPositions[base + 1] = current.y;
-        b.currentPositions[base + 2] = current.z;
+        b.currentPositions[base] = expanded.x;
+        b.currentPositions[base + 1] = expanded.y;
+        b.currentPositions[base + 2] = expanded.z;
         writeEncoded(
           b.previousHigh,
           b.previousLow,
@@ -239,6 +261,7 @@ export class PolylineBuilder {
     this.vertexCount = segCount * 4;
     this.segs = segCount;
     this.boundingSphere = BoundingSphere.fromPoints(points);
+    this.boundingSphere.radius += Math.max(0, this.surfaceWidthMeters) * 0.5;
   }
 
   toPrimitive(depthTest = true): Primitive | undefined {
@@ -289,7 +312,17 @@ export class PolylineBuilder {
 
     // 基础 Appearance 不支持自定义 uniforms（那是 Material 体系），
     // 因此用 #define 把线宽注入着色器源码，LINE_WIDTH_PIXELS 仍是唯一来源。
-    const vertexShaderSource = `#define LINE_WIDTH ${LINE_WIDTH_PIXELS}.0\n${polylineVertShader}`;
+    const vertexShaderSource = this.surfaceWidthMeters > 0
+      ? `in vec3 position3DHigh;
+         in vec3 position3DLow;
+         in float aParam;
+         in float batchId;
+         out float vParam;
+         void main() {
+           gl_Position = czm_modelViewProjectionRelativeToEye * czm_computePosition();
+           vParam = aParam;
+         }`
+      : `#define LINE_WIDTH ${LINE_WIDTH_PIXELS}.0\n${polylineVertShader}`;
 
     return new Primitive({
       geometryInstances: new GeometryInstance({ geometry }),
