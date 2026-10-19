@@ -23,6 +23,17 @@ export class JkPaths extends JkBase {
     this.activePath = undefined;
   }
 
+  undo() {
+    const path = this.paths[this.paths.length - 1];
+    if (!path || !path.undo()) return false;
+    if (!path.pointCount) {
+      if (this.activePath === path) this.activePath = undefined;
+      this.paths.pop();
+      path.destroy();
+    }
+    return true;
+  }
+
   clear() {
     this.paths.forEach((path) => path.destroy());
     this.paths = [];

@@ -75,9 +75,29 @@ export class JkPath extends JkBase {
     this.viewer.scene.requestRender();
   }
 
+  get pointCount() {
+    return this.builder.pointCount;
+  }
+
+  undo() {
+    if (this.destroyed || this.viewer.isDestroyed() || !this.pointCount) return false;
+    const positions = this.builder.getPositions();
+    positions.pop();
+    this.builder.reset();
+    positions.forEach((position) => this.builder.addPoint(position));
+    this.points.remove(this.points.get(this.points.length - 1));
+    this.updateLine();
+    this.viewer.scene.requestRender();
+    return true;
+  }
+
   private updateLine() {
     const primitive = this.builder.toPrimitive(false);
-    if (!primitive) return;
+    if (!primitive) {
+      if (this.primitive) this.viewer.scene.primitives.remove(this.primitive);
+      this.primitive = undefined;
+      return;
+    }
 
     this.viewer.scene.primitives.add(primitive);
     if (this.primitive) this.viewer.scene.primitives.remove(this.primitive);

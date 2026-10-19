@@ -92,8 +92,7 @@ export class JkLayer extends JkBase {
     this.pickHandler.setInputAction((movement: { position: Cartesian2 }) => {
       const picked = this.viewer.scene.pick(movement.position);
 
-      // 路径坐标：直接取点击像素处的模型/地形表面深度，不依赖拾取对象类型。
-      // 半透明模型深度拾取已开启（pickTranslucentDepth），玻璃外壳也能命中。
+   
       let position: Cartesian3 | undefined;
       if (this.viewer.scene.pickPositionSupported) {
         position = this.viewer.scene.pickPosition(movement.position);
@@ -189,7 +188,7 @@ export class JkLayer extends JkBase {
         return;
       }
       if (index === 0) {
-        result.value.customShader = this.glassShader;
+     result.value.customShader = this.glassShader;
       } else if (index === 1) {
         // 等 Cesium 完成该 tileset 的 featureId 计算后再创建并绑定着色器，
         // 避免编译时 featureId 通道尚未就绪导致 fsInput.featureIds.featureId_0 报错。
