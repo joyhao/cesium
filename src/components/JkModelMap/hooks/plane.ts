@@ -1,7 +1,22 @@
 import { JkBase } from "./base";
 import { JkPaths } from "./paths";
 
-// 平面模块负责路径绘制功能的初始化与生命周期管理。
 export class JkPlane extends JkBase {
- 
+  readonly paths: JkPaths;
+
+  constructor() {
+    super();
+    this.paths = new JkPaths();
+    this.on("model_position_pick", ({ detail }) => {
+      this.paths.addPosition(detail.position);
+    });
+    this.on("model_path_end", () => {
+      this.paths.endPath();
+    });
+  }
+
+  destroy() {
+    this.offAllListeners();
+    this.paths.destroy();
+  }
 }

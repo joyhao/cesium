@@ -1,3 +1,4 @@
+import type { Cartesian3 } from "cesium";
 import type {
   AddPointRequestDetail,
   CameraChangeDetail,
@@ -27,7 +28,9 @@ export enum cEnum {
   add_point_request = "add_point_request",
   point_hover = "point_hover",
   line_hover = "line_hover",
+  model_position_pick = "model_position_pick",
   model_feature_pick = "model_feature_pick",
+  model_path_end = "model_path_end",
   shield_change = "shield_change",
 }
 
@@ -46,6 +49,13 @@ export interface CEvent {
   add_point_request: CustomEvent<AddPointRequestDetail>;
   point_hover: CustomEvent<PointHoverDetail | null>;
   line_hover: CustomEvent<LineHoverDetail | null>;
+  model_position_pick: CustomEvent<{
+    position: Cartesian3;
+    longitude: number;
+    latitude: number;
+    height: number;
+  }>;
   model_feature_pick: CustomEvent<ModelFeatureDetail | null>;
+  model_path_end: CustomEvent<{}>;
   shield_change: CustomEvent<{ visible: boolean }>;
 }

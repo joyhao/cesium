@@ -12,6 +12,7 @@ export class JkMap extends JkBase {
 
   private visibilityTimer?: ReturnType<typeof setTimeout>;
   private shieldHidden = false;
+  private destroyed = false;
 
   constructor(selector: string) {
     super(selector);
@@ -23,6 +24,7 @@ export class JkMap extends JkBase {
     // 模型加载完成后把半圆能量罩罩在模型上，与模型联动。
     this.layer.ready
       .then(() => {
+        if (this.destroyed || this.layer.viewer.isDestroyed()) return;
         const c = this.layer.center;
         const r = this.layer.modelRadius;
         if (!c || r <= 0) return;
@@ -69,9 +71,11 @@ export class JkMap extends JkBase {
   }
 
   destroy() {
-    this.layer.destroy();
+    if (this.destroyed) return;
+    this.destroyed = true;
     this.camera.destroy();
     this.shield.destroy();
+    this.layer.destroy();
     super.destroy();
 
     if (this.visibilityTimer) {

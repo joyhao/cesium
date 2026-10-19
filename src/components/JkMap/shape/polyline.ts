@@ -241,7 +241,7 @@ export class PolylineBuilder {
     this.boundingSphere = BoundingSphere.fromPoints(points);
   }
 
-  toPrimitive(): Primitive | undefined {
+  toPrimitive(depthTest = true): Primitive | undefined {
     if (this.positions.length < 2) return undefined;
 
     this.buildGeometry(
@@ -297,7 +297,7 @@ export class PolylineBuilder {
         vertexShaderSource,
         fragmentShaderSource: polylineFragShader,
         translucent: false,
-        renderState: { depthTest: { enabled: true } },
+        renderState: { depthTest: { enabled: depthTest } },
       }),
       asynchronous: false,
       allowPicking: false,

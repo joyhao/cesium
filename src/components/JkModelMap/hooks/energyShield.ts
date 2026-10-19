@@ -34,6 +34,7 @@ interface ResolvedShieldOptions {
 export class JkEnergyShield extends JkBase {
   viewer: Viewer;
   private primitive?: Primitive;
+  private destroyed = false;
   private material?: Material;
   private options: ResolvedShieldOptions = {
     radii: [50, 50, 50],
@@ -63,6 +64,7 @@ export class JkEnergyShield extends JkBase {
 
   // 在 center 显示/更新能量罩；options 省略时沿用上次配置。
   show(center: Cartesian3, options?: JkShieldOptions) {
+    if (this.destroyed || this.viewer.isDestroyed()) return;
     if (options) {
       this.options = {
         radii: options.radii ?? this.options.radii,
@@ -143,11 +145,13 @@ export class JkEnergyShield extends JkBase {
   }
 
   destroy() {
+    if (this.destroyed) return;
+    this.destroyed = true;
     this.offAllListeners();
-    if (this.primitive) {
+    if (this.primitive && !this.viewer.isDestroyed()) {
       this.viewer.scene.primitives.remove(this.primitive);
-      this.primitive = undefined;
     }
+    this.primitive = undefined;
     this.material = undefined;
   }
 }
