@@ -12,6 +12,8 @@ import {
 import { JkBase } from "./base";
 import { PolylineBuilder } from "@com/JkMap/shape/polyline";
 import pathMarkerShader from "../shader/pathMarker.frag.glsl";
+import { Math as CesiumMath } from "cesium";
+import type { PathVertex } from "../type/path.type";
 
 export class JkPath extends JkBase {
   readonly viewer: Viewer;
@@ -19,13 +21,31 @@ export class JkPath extends JkBase {
   private points: PrimitiveCollection;
   private primitive?: Primitive;
   private destroyed = false;
+  readonly id: number;
 
-  constructor() {
+  constructor(id = 0) {
     super();
     this.viewer = JkBase.viewer;
+    this.builder.curved = false;
     this.builder.surfaceWidthMeters = 0.3;
     this.builder.ellipsoid = this.viewer.scene.globe.ellipsoid;
     this.points = this.viewer.scene.primitives.add(new PrimitiveCollection());
+    this.id = id;
+  }
+
+  setPoints(points: PathVertex[]) {
+    if (this.destroyed || this.viewer.isDestroyed()) return;
+    this.builder.reset();
+    this.points.removeAll();
+    for (const point of points) {
+      const position = Cartesian3.fromDegrees(
+        point.lon, point.lat, point.height, this.viewer.scene.globe.ellipsoid,
+      );
+      this.builder.addPoint(position);
+      this.addMarker(position);
+    }
+    this.updateLine();
+    this.viewer.scene.requestRender();
   }
 
   private addMarker(position: Cartesian3) {
@@ -73,6 +93,7 @@ export class JkPath extends JkBase {
     this.addMarker(position);
     this.updateLine();
     this.viewer.scene.requestRender();
+    return true;
   }
 
   get pointCount() {
@@ -81,14 +102,21 @@ export class JkPath extends JkBase {
 
   undo() {
     if (this.destroyed || this.viewer.isDestroyed() || !this.pointCount) return false;
-    const positions = this.builder.getPositions();
-    positions.pop();
-    this.builder.reset();
-    positions.forEach((position) => this.builder.addPoint(position));
-    this.points.remove(this.points.get(this.points.length - 1));
-    this.updateLine();
-    this.viewer.scene.requestRender();
+    const points = this.getPoints();
+    points.pop();
+    this.setPoints(points);
     return true;
+  }
+
+  getPoints(): PathVertex[] {
+    return this.builder.getPositions().map((position) => {
+      const point = Cartographic.fromCartesian(position, this.viewer.scene.globe.ellipsoid);
+      return {
+        lon: CesiumMath.toDegrees(point.longitude),
+        lat: CesiumMath.toDegrees(point.latitude),
+        height: point.height,
+      };
+    });
   }
 
   private updateLine() {

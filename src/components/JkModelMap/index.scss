@@ -33,6 +33,70 @@
   left: 106px;
 }
 
+.path-list {
+  position: absolute;
+  z-index: 3;
+  top: 72px;
+  left: 16px;
+  width: min(260px, calc(100% - 32px));
+  max-height: calc(100% - 100px);
+  overflow: auto;
+  box-sizing: border-box;
+  padding: 14px;
+  border: 1px solid rgba(126, 191, 230, 0.35);
+  border-radius: 8px;
+  background: rgba(5, 14, 25, 0.9);
+  color: #d7e9f8;
+  backdrop-filter: blur(8px);
+
+  h3 {
+    margin: 0 0 12px;
+    font-size: 14px;
+  }
+
+  p, .path-description span, h3 span {
+    color: #8fa9bf;
+    font-size: 12px;
+  }
+
+  ul {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  li {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 0;
+    border-top: 1px solid rgba(126, 191, 230, 0.15);
+  }
+
+  .path-description {
+    display: grid;
+    gap: 4px;
+    min-width: 0;
+    overflow-wrap: anywhere;
+    font-size: 13px;
+  }
+
+  button {
+    flex-shrink: 0;
+    padding: 5px 10px;
+    border: 1px solid rgba(255, 123, 123, 0.4);
+    border-radius: 5px;
+    background: rgba(120, 30, 40, 0.25);
+    color: #ffaaaa;
+    cursor: pointer;
+
+    &:hover, &:focus-visible {
+      background: rgba(160, 40, 50, 0.5);
+    }
+  }
+}
+
 .feature-info {
   position: absolute;
   z-index: 3;

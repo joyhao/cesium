@@ -1,4 +1,5 @@
 import type { Cartesian3 } from "cesium";
+import type { PathData } from "../type/path.type";
 import type {
   AddPointRequestDetail,
   CameraChangeDetail,
@@ -31,6 +32,7 @@ export enum cEnum {
   model_position_pick = "model_position_pick",
   model_feature_pick = "model_feature_pick",
   model_path_end = "model_path_end",
+  model_paths_change = "model_paths_change",
   shield_change = "shield_change",
 }
 
@@ -57,5 +59,6 @@ export interface CEvent {
   }>;
   model_feature_pick: CustomEvent<ModelFeatureDetail | null>;
   model_path_end: CustomEvent<{}>;
+  model_paths_change: CustomEvent<{ paths: PathData[] }>;
   shield_change: CustomEvent<{ visible: boolean }>;
 }

@@ -217,8 +217,8 @@ export class PolylineBuilder {
         if (this.surfaceWidthMeters > 0) {
           const normal = this.ellipsoid.geodeticSurfaceNormal(current, new Cartesian3());
           const direction = Cartesian3.subtract(
-            isEnd ? next : end,
-            isEnd ? start : previous,
+            this.curved ? (isEnd ? next : end) : end,
+            this.curved ? (isEnd ? start : previous) : start,
             new Cartesian3(),
           );
           const side = Cartesian3.cross(normal, direction, new Cartesian3());

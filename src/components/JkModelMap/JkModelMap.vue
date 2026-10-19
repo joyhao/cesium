@@ -11,6 +11,23 @@
   >
     <button class="reset-view" type="button" @click="resetView">还原视角</button>
     <button class="switch-view" type="button" @click="switchView">切换视角</button>
+    <aside class="path-list" aria-label="已保存路径" @keydown.stop>
+      <h3>路径列表 <span>{{ pathsStore.paths.length }}</span></h3>
+      <p v-if="!pathsStore.paths.length">暂无路径，绘制后自动保存</p>
+      <ul v-else>
+        <li v-for="path in pathsStore.paths" :key="path.id">
+          <div class="path-description">
+            <strong>{{ path.label }}</strong>
+            <span>{{ path.points.length }} 个点</span>
+          </div>
+          <button
+            type="button"
+            :aria-label="`删除${path.label}`"
+            @click.stop="pathsStore.removePath(path.id)"
+          >删除</button>
+        </li>
+      </ul>
+    </aside>
     <div class="feature-info">
       <div>模型Name：<strong>{{ feature.name }}</strong></div>
       <div>Feature ID：<strong>{{ feature.featureId }}</strong></div>
@@ -28,6 +45,12 @@
 
 <script setup lang="ts">
 import { JkMap } from "./hooks/map";
+import { usePaths } from "../../stores/paths";
+import { watch, type WatchStopHandle } from "vue";
+
+const pathsStore = usePaths();
+let stopPathsWatch: WatchStopHandle | undefined;
+let syncingPaths = false;
 
 // 当前选中模型构件的信息，用于右侧属性面板。
 const feature = reactive<{ name: string; featureId?: number }>({
@@ -81,6 +104,22 @@ function formatProperty(value: unknown) {
 // DOM 就绪后创建地图，并监听相机、帧率和模型构件选择事件。
 onMounted(() => {
   map = new JkMap(".model-map-container");
+  map.layer.plane.paths.loadPaths(pathsStore.paths);
+  map.on("model_paths_change", ({ detail }) => {
+    syncingPaths = true;
+    try {
+      pathsStore.paths = detail.paths;
+    } finally {
+      syncingPaths = false;
+    }
+  });
+  stopPathsWatch = watch(
+    () => pathsStore.paths,
+    (paths) => {
+      if (!syncingPaths) map.layer.plane.paths.loadPaths(paths);
+    },
+    { deep: true, flush: "sync" },
+  );
 
   map.camera.on("camera_change", (event) => {
     info.height = event.detail.height;
@@ -105,6 +144,7 @@ onMounted(() => {
 
 // 组件卸载前释放地图资源及其内部事件监听。
 onBeforeUnmount(() => {
+  stopPathsWatch?.();
   map?.destroy();
 });
 </script>
