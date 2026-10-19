@@ -25,6 +25,7 @@ export class JkMap extends JkBase {
       .then(() => {
         const c = this.layer.center;
         const r = this.layer.modelRadius;
+        if (!c || r <= 0) return;
         // 底座落在地面、拱到模型顶部，整体放大 1.15 倍让扩散范围更大：ENU 半圆。
         const k = 1.15;
         const carto = Cartographic.fromCartesian(c);

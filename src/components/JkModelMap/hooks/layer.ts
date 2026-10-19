@@ -17,6 +17,7 @@ import {
 import { JkBase } from "./base";
 import glassFragmentShader from "../shader/glass.frag.glsl";
 import modelFragmentShader from "../shader/model.frag.glsl";
+import { JkPlane } from "./plane";
 
 // 创建并叠加天地图矢量底图和注记图层。
 export class JkLayer extends JkBase {
@@ -27,7 +28,7 @@ export class JkLayer extends JkBase {
   private modelShader?: CustomShader;
   private pickHandler?: ScreenSpaceEventHandler;
   private loadPromise: Promise<void>;
-
+  plane: JkPlane;
 
   // 承载高亮着色器的 tileset（index 1 为模型，缺失时退回玻璃 index 0），
   // 供能量罩等外部模块与模型位置联动。
@@ -55,12 +56,15 @@ export class JkLayer extends JkBase {
     super();
     this.viewer = JkBase.viewer;
     this.init();
+    this.plane = new JkPlane();
     this.loadPromise = this.loadTileset();
   }
 
 
 
   init() {
+    // 玻璃 tileset 为半透明，拾取时也需要写入其深度，避免落点穿到下方地球。
+    this.viewer.scene.pickTranslucentDepth = true;
     const { token, vector, subdomains, cia } = this.AppConfig;
 
     const baseProvider = new UrlTemplateImageryProvider({
@@ -203,6 +207,7 @@ export class JkLayer extends JkBase {
   }
 
   destroy() {
+    this.plane.destroy();
     this.pickHandler?.destroy();
     this.pickHandler = undefined;
     if (!this.viewer.isDestroyed()) {
