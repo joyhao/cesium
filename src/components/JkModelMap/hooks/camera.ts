@@ -25,6 +25,9 @@ export class JkCamera extends JkBase {
 
   private update = () => {
     const camera = this.viewer.camera;
+    // camera.positionCartographic 直接获取相机当前所在位置的经纬度和高度‌
+
+    
     const height = camera.positionCartographic.height;
     this.height = Math.round(height);
     this.level = this.heightToLevel(height);
@@ -52,14 +55,13 @@ export class JkCamera extends JkBase {
 
     if (height <= 0) return MAX_LEVEL;
 
-    const circumference = 2 * Math.PI * EARTH_RADIUS;
+    const circumference = 2 * Math.PI * EARTH_RADIUS; // 周长
     const level = Math.round(Math.log2(circumference / height));
 
     return Math.min(MAX_LEVEL, Math.max(0, level));
   }
 
   destroy() {
-    this.offAllListeners();
     this.disposers.forEach((dispose) => dispose());
     this.disposers = [];
   }

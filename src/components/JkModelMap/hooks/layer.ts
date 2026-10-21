@@ -39,6 +39,7 @@ export class JkLayer extends JkBase {
 
   // 模型中心（ECEF 世界坐标），能量罩定位用。
   get center(): Cartesian3 | undefined {
+
     return this.modelTileset?.boundingSphere.center;
   }
 
@@ -60,7 +61,12 @@ export class JkLayer extends JkBase {
   }
 
   init() {
+
+    // 控制：模型、实体等对象是否与地球地形进行深度测试，也就是地形能不能挡住它们
+    // true：地形可以遮挡对象
+    // false（默认）：不让对象被地形按深度遮挡
     this.viewer.scene.globe.depthTestAgainstTerrain = false;
+    // Translucent  拾取半透明
     this.viewer.scene.pickTranslucentDepth = false;
     const { token, vector, subdomains, cia } = this.AppConfig;
 
@@ -87,12 +93,14 @@ export class JkLayer extends JkBase {
 
     this.pickHandler = new ScreenSpaceEventHandler(this.viewer.scene.canvas);
     this.pickHandler.setInputAction((movement: { position: Cartesian2 }) => {
-      const picked = this.viewer.scene.pick(movement.position);
+      // 用于获取屏幕某个位置选中的对象，常用于点击选择模型或构件
+      const picked = this.viewer.scene.pick(movement.position) as Cesium3DTileFeature;
 
-   
+
       let position: Cartesian3 | undefined;
       if (this.viewer.scene.pickPositionSupported) {
         position = this.viewer.scene.pickPosition(movement.position);
+
       }
       if (!position) {
         const ray = this.viewer.camera.getPickRay(movement.position);
@@ -102,15 +110,13 @@ export class JkLayer extends JkBase {
       }
       if (position && Number.isFinite(position.x)) {
         const cartographic = Cartographic.fromCartesian(position);
+
         const coordinates = {
           longitude: CesiumMath.toDegrees(cartographic.longitude),
           latitude: CesiumMath.toDegrees(cartographic.latitude),
           height: cartographic.height,
         };
-        console.log(
-          "模型表面坐标（经纬度：度，高度：米，相对 WGS84 椭球）",
-          coordinates,
-        );
+
         this.emit("model_position_pick", {
           position,
           ...coordinates,
@@ -140,6 +146,8 @@ export class JkLayer extends JkBase {
           -1,
         ];
       }
+
+
       this.emit("model_feature_pick", {
         name: picked.getProperty("name"),
         featureId,
@@ -151,18 +159,26 @@ export class JkLayer extends JkBase {
       this.emit("model_path_end", {});
     }, ScreenSpaceEventType.RIGHT_CLICK);
 
-    // 默认显示地球（球体与贴图）。运行时可用 setGlobeVisible(false) 隐藏。
-    this.setGlobeVisible(true);
+
   }
 
   async loadTileset() {
     const tilesetUrls = this.AppConfig.tilesetUrls;
+    // material.diffuse	材质的基础颜色
+    // material.roughness	粗糙度，越小高光越集中，越大越柔和
+    // material.metallic	金属度
+    // material.emissive	自发光颜色
+    // material.alpha	不透明度，是否按半透明渲染还取决于透明模式配置
     this.glassShader = new CustomShader({
+      // 基于物理的渲染光照模型  , 用来模拟材质在光照下的表现
       lightingModel: LightingModel.PBR,
       translucencyMode: CustomShaderTranslucencyMode.TRANSLUCENT,
       fragmentShaderText: glassFragmentShader,
     });
 
+
+    // Promise.all()：其中一个失败，整体就会拒绝，但不会自动取消其他任务。
+    //  Promise.allSettled()：等全部任务结束，再逐个检查成功或失败。
     const results = await Promise.allSettled(
       tilesetUrls.map((url) => Cesium3DTileset.fromUrl(url)),
     );
@@ -185,7 +201,7 @@ export class JkLayer extends JkBase {
         return;
       }
       if (index === 0) {
-    result.value.customShader = this.glassShader;
+        result.value.customShader = this.glassShader;
       } else if (index === 1) {
         // 等 Cesium 完成该 tileset 的 featureId 计算后再创建并绑定着色器，
         // 避免编译时 featureId 通道尚未就绪导致 fsInput.featureIds.featureId_0 报错。
@@ -217,9 +233,11 @@ export class JkLayer extends JkBase {
         };
         if (result.value.tilesLoaded) {
           attachModelShader();
-        } else {
-          result.value.allTilesLoaded.addEventListener(attachModelShader);
         }
+
+        //  else {
+        //   result.value.allTilesLoaded.addEventListener(attachModelShader);
+        //  }
       }
       this.tilesets.push(result.value);
       this.viewer.scene.primitives.add(result.value);
@@ -255,10 +273,7 @@ export class JkLayer extends JkBase {
     });
   }
 
-  // 显隐地球（球体与贴图）。隐藏后场景只显示 3D Tiles 模型与能量罩。
-  setGlobeVisible(visible: boolean) {
-    this.viewer.scene.globe.show = visible;
-  }
+
 
   destroy() {
     if (this.destroyed) return;

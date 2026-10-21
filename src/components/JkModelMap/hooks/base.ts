@@ -28,9 +28,7 @@ export class JkBase {
 
 
 
-  // 使用 Cesium postRender 统计实际完成的场景渲染帧，而不是浏览器刷新帧。
   startFps() {
-    if (!JkBase.viewer || this.removePostRender) return;
 
     this.fpsLastTime = performance.now();
     this.fpsFrameCount = 0;
