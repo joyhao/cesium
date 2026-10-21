@@ -16,19 +16,7 @@ import { cEnum } from "../event/event";
 import { JkBase } from "./base";
 
 import shieldMaterialSource from "../shader/shield.glsl";
-
-export interface JkShieldOptions {
-  // 椭球三个半轴半径（米），默认球形；改成 [r, r, r * 0.5] 可当罩在楼顶的圆顶。
-  radii?: [number, number, number];
-  color?: Color;
-  opacity?: number;
-}
-
-interface ResolvedShieldOptions {
-  radii: [number, number, number];
-  color: Color;
-  opacity: number;
-}
+import { JkShieldOptions, ResolvedShieldOptions } from "../type/energy.type";
 
 // 能量罩：在指定世界坐标渲染半透明发光椭球"护罩"，动画由 czm_frameNumber 驱动。
 export class JkEnergyShield extends JkBase {
@@ -44,6 +32,8 @@ export class JkEnergyShield extends JkBase {
 
   constructor() {
     super();
+
+    
     this.viewer = JkBase.viewer;
   }
 

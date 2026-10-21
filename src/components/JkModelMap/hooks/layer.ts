@@ -178,7 +178,7 @@ export class JkLayer extends JkBase {
 
 
     // Promise.all()：其中一个失败，整体就会拒绝，但不会自动取消其他任务。
-    //  Promise.allSettled()：等全部任务结束，再逐个检查成功或失败。
+    // Promise.allSettled()：等全部任务结束，再逐个检查成功或失败。
     const results = await Promise.allSettled(
       tilesetUrls.map((url) => Cesium3DTileset.fromUrl(url)),
     );
@@ -234,10 +234,9 @@ export class JkLayer extends JkBase {
         if (result.value.tilesLoaded) {
           attachModelShader();
         }
-
-        //  else {
-        //   result.value.allTilesLoaded.addEventListener(attachModelShader);
-        //  }
+         else {
+          result.value.allTilesLoaded.addEventListener(attachModelShader);
+         }
       }
       this.tilesets.push(result.value);
       this.viewer.scene.primitives.add(result.value);
