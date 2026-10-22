@@ -1,12 +1,10 @@
 void fragmentMain(FragmentInput fsInput, inout czm_modelMaterial material) {
-  // X、Y 方向等权叠加，形成局部 XY 平面上的对角线渐变。
-  vec2 position = fsInput.attributes.positionMC.xy;
-  const vec2 minXY = vec2(0.0, 0.0);
-  const vec2 maxXY = vec2(100.0, 100.0);
-  vec2 normalized = (position - minXY) / (maxXY - minXY);
+  // 各瓦片统一到模型中心的 ENU 坐标系，范围由模型 0 的包围球传入。
+  vec3 position = uEyeToGradient * (fsInput.attributes.positionEC - uGradientCenterEC);
+  vec2 normalized = (position.xy - uGradientMinXY) / (uGradientMaxXY - uGradientMinXY);
   float t = clamp((normalized.x + normalized.y) * 0.5, 0.0, 1.0);
-  vec3 startColor = vec3(0.012, 0.0, 0.047);
-  vec3 endColor = vec3(1.0, 1.0, 1.0);
+  vec3 startColor = vec3(0.10, 0.22, 0.55);
+  vec3 endColor = vec3(0.25, 0.90, 0.85);
   vec3 gradientColor = mix(startColor, endColor, t);
   material.diffuse = gradientColor;
   material.emissive = gradientColor * 0.18;

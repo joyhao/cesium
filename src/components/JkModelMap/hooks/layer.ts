@@ -7,6 +7,8 @@ import {
   CustomShader,
   HeadingPitchRange,
   Matrix4,
+  Matrix3,
+  Transforms,
   ScreenSpaceEventHandler,
   ScreenSpaceEventType,
   LightingModel,
@@ -26,6 +28,7 @@ export class JkLayer extends JkBase {
   AppConfig = inject<AppConfig>("AppConfig") as AppConfig;
   private tilesets: Cesium3DTileset[] = [];
   private glassShader?: CustomShader;
+  private removeGlassFrameUpdate?: () => void;
   private modelShader?: CustomShader;
   private pickHandler?: ScreenSpaceEventHandler;
   private loadPromise: Promise<void>;
@@ -174,6 +177,16 @@ export class JkLayer extends JkBase {
       lightingModel: LightingModel.PBR,
       translucencyMode: CustomShaderTranslucencyMode.TRANSLUCENT,
       fragmentShaderText: glassFragmentShader,
+      uniforms: {
+        // 模型中心的眼空间坐标，由 configureGlassGradient 随相机更新。
+        uGradientCenterEC: { type: UniformType.VEC3, value: new Cartesian3() },
+        // 将眼空间方向旋转到模型中心的 ENU（东、北、上）坐标系。
+        uEyeToGradient: { type: UniformType.MAT3, value: Matrix3.clone(Matrix3.IDENTITY) },
+        // ±1 只是初始化占位；模型 0 加载后改为 ±包围球半径，单位米。
+        // 这是 XY 方向的近似包围范围，不是模型真实长宽，也不是 UV 坐标。
+        uGradientMinXY: { type: UniformType.VEC2, value: new Cartesian2(-1, -1) },
+        uGradientMaxXY: { type: UniformType.VEC2, value: new Cartesian2(1, 1) },
+      },
     });
 
 
@@ -201,6 +214,7 @@ export class JkLayer extends JkBase {
         return;
       }
       if (index === 0) {
+        this.configureGlassGradient(result.value);
         result.value.customShader = this.glassShader;
       } else if (index === 1) {
         // 等 Cesium 完成该 tileset 的 featureId 计算后再创建并绑定着色器，
@@ -211,6 +225,10 @@ export class JkLayer extends JkBase {
               lightingModel: LightingModel.PBR,
               fragmentShaderText: modelFragmentShader,
               uniforms: {
+                uGradientCenterEC: { type: UniformType.VEC3, value: new Cartesian3() },
+                uEyeToGradient: { type: UniformType.MAT3, value: Matrix3.clone(Matrix3.IDENTITY) },
+                uGradientMinXY: { type: UniformType.VEC2, value: new Cartesian2(-1, -1) },
+                uGradientMaxXY: { type: UniformType.VEC2, value: new Cartesian2(1, 1) },
                 uTargetId: {
                   type: "float[8]" as unknown as UniformType,
                   value: new Float32Array(8).fill(-1),
@@ -245,6 +263,44 @@ export class JkLayer extends JkBase {
     this.resetView();
   }
 
+  /** 为模型 0 建立跨瓦片一致的渐变空间；使用包围球近似范围，非精确包围盒。 */
+  private configureGlassGradient(tileset: Cesium3DTileset) {
+    const shader = this.glassShader;
+    if (!shader) return;
+    this.removeGlassFrameUpdate?.();
+    const centerEC = new Cartesian3();
+    const worldToLocal = new Matrix4();
+    const eyeToLocal = new Matrix4();
+    const rotation = new Matrix3();
+    const minXY = new Cartesian2();
+    const maxXY = new Cartesian2();
+    const update = () => {
+      const sphere = tileset.boundingSphere;
+      // 世界坐标 → 模型中心 ENU；再组合眼空间 → 世界坐标，得到眼空间 → ENU。
+      const frame = Transforms.eastNorthUpToFixedFrame(sphere.center, this.viewer.scene.globe.ellipsoid);
+      Matrix4.inverseTransformation(frame, worldToLocal);
+      Matrix4.multiply(worldToLocal, this.viewer.camera.inverseViewMatrix, eyeToLocal);
+      Matrix4.getMatrix3(eyeToLocal, rotation);
+      // shader 先在眼空间减去中心，再旋转，避免直接相减两个巨大的 ECEF 坐标。
+      Matrix4.multiplyByPoint(this.viewer.camera.viewMatrix, sphere.center, centerEC);
+      // 两轴暂用同一个半径近似，最小值保护可避免 shader 归一化时除以零。
+      const radius = Math.max(sphere.radius, 0.001);
+      minXY.x = minXY.y = -radius;
+      maxXY.x = maxXY.y = radius;
+      // 玻璃与内部模型共享范围，模型 shader 延迟创建后也会在渲染前同步。
+      for (const target of [shader, this.modelShader]) {
+        if (!target) continue;
+        target.setUniform("uGradientCenterEC", centerEC);
+        target.setUniform("uEyeToGradient", rotation);
+        target.setUniform("uGradientMinXY", minXY);
+        target.setUniform("uGradientMaxXY", maxXY);
+      }
+    };
+    update();
+    // 眼空间随相机变化，每次渲染前更新；destroy 中移除监听。
+    this.removeGlassFrameUpdate = this.viewer.scene.preRender.addEventListener(update);
+  }
+
   resetView() {
     const tileset = this.tilesets[0];
 
@@ -277,6 +333,8 @@ export class JkLayer extends JkBase {
   destroy() {
     if (this.destroyed) return;
     this.destroyed = true;
+    this.removeGlassFrameUpdate?.();
+    this.removeGlassFrameUpdate = undefined;
     this.offAllListeners();
     this.pickHandler?.destroy();
     this.pickHandler = undefined;
