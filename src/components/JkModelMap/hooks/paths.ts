@@ -15,6 +15,10 @@ export class JkPaths extends JkBase {
     this.paths.forEach((path) => path.setVisible(visible));
   }
 
+  setPathVisible(id: number, visible: boolean) {
+    this.paths.find((path) => path.id === id)?.setVisible(this.visible && visible);
+  }
+
   loadPaths(data: PathData[]) {
     const existing = new Map(this.paths.map((path) => [path.id, path]));
     const ids = new Set(data.map((path) => path.id));

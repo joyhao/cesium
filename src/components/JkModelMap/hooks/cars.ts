@@ -11,7 +11,7 @@ export class JkCars extends JkBase {
   private speed = 20;
   private speedFactors = new Map<number, number>();
 
-  constructor() {
+  constructor(paths: PathData[] = []) {
     super();
     this.removeUpdate = JkBase.viewer.scene.preUpdate.addEventListener(
       () => {
@@ -22,21 +22,29 @@ export class JkCars extends JkBase {
         if (this.cars.size) JkBase.viewer.scene.requestRender();
       },
     );
+    this.sync(paths);
   }
 
-  sync(paths: PathData[]) {
+  sync(paths: PathData[], createMissing = true) {
     if (this.destroyed) return;
-    const ids = new Set(paths.map((path) => path.id));
+    const validPaths = paths.filter((path) => {
+      if (!path || !Array.isArray(path.points)) return false;
+      const first = path.points[0];
+      return first && path.points.some((point) =>
+        point.lon !== first.lon || point.lat !== first.lat || point.height !== first.height,
+      );
+    });
+    const ids = new Set(validPaths.map((path) => path.id));
     for (const [id, car] of this.cars) {
       if (ids.has(id)) continue;
       car.destroy();
       this.cars.delete(id);
       this.speedFactors.delete(id);
     }
-    for (const path of paths) {
+    for (const path of validPaths) {
       const existing = this.cars.get(path.id);
       if (existing) existing.setPath(path.points);
-      else {
+      else if (createMissing) {
         const speedFactor = 0.9 + Math.random() * 0.2;
         this.speedFactors.set(path.id, speedFactor);
         this.cars.set(path.id, new JkCar(path.id, path.points, {
@@ -56,6 +64,10 @@ export class JkCars extends JkBase {
       car.setSpeed(speed * (this.speedFactors.get(id) ?? 1));
     }
     JkBase.viewer.scene.requestRender();
+  }
+
+  hasPath(id: number) {
+    return this.cars.has(id);
   }
 
   get count() {

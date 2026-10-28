@@ -11,10 +11,13 @@ export class JkPlane extends JkBase {
     this.paths = new JkPaths();
     this.cars = new JkCars();
     this.on("model_paths_change", ({ detail }) => {
-      this.cars.sync(detail.paths);
+      this.cars.sync(detail.paths, false);
+      detail.paths.forEach((path) => this.paths.setPathVisible(path.id, !this.cars.hasPath(path.id)));
     });
     this.on("model_paths_loaded", ({ detail }) => {
-      this.cars.sync(detail.paths);
+      const firstPath = detail.paths[0];
+      this.cars.sync(firstPath ? [firstPath] : []);
+      detail.paths.forEach((path) => this.paths.setPathVisible(path.id, !this.cars.hasPath(path.id)));
     });
     this.on("model_position_pick", ({ detail }) => {
       this.paths.addPosition(detail.position);
