@@ -1,4 +1,5 @@
 import polylineVertShader from "@com/JkMap/shader/polyline.vert.glsl";
+import polylineSurfaceVertShader from "@com/JkMap/shader/polylineSurface.vert.glsl";
 import polylineFragShader from "@com/JkMap/shader/polyline.frag.glsl";
 import {
   Appearance,
@@ -13,10 +14,10 @@ import {
   Primitive,
   PrimitiveType,
 } from "cesium";
+import { CustomAttributes, LineBuffers } from "../type/map.type";
 
 export const LINE_WIDTH_PIXELS = 10;
 
-type CustomAttributes = GeometryAttributes & Record<string, GeometryAttribute>;
 
 function setVec3Attribute(
   attributes: CustomAttributes,
@@ -71,17 +72,6 @@ function catmullRom(
   );
 }
 
-interface LineBuffers {
-  currentPositions: Float64Array;
-  previousHigh: Float32Array;
-  previousLow: Float32Array;
-  nextHigh: Float32Array;
-  nextLow: Float32Array;
-  sides: Float32Array;
-  indices: Uint32Array;
-  params: Float32Array;
-}
-
 const DEFAULT_CAPACITY_SEGMENTS = 4096;
 
 /**
@@ -112,15 +102,24 @@ export class PolylineBuilder {
   }
 
   private allocBuffers(capacity: number): LineBuffers {
+    // capacity 为线段容量，每段用 4 个顶点组成线带四边形。
     const v = capacity * 4;
     return {
+      // 每个顶点的世界坐标 x、y、z；使用双精度保存，避免 ECEF 大坐标精度损失。
       currentPositions: new Float64Array(v * 3),
+      // 前一个路径点坐标的高位部分，与低位一起供 shader 还原并计算线条方向。
       previousHigh: new Float32Array(v * 3),
+      // 前一个路径点的低位残差，补偿单个 Float32 无法保存的坐标精度。
       previousLow: new Float32Array(v * 3),
+      // 后一个路径点坐标的高位部分，每个顶点保存 x、y、z 三个分量。
       nextHigh: new Float32Array(v * 3),
+      // 后一个路径点的低位残差，与 nextHigh 配对使用。
       nextLow: new Float32Array(v * 3),
+      // 顶点位于线条的哪一侧：-1 或 1，用于屏幕空间线宽展开。
       sides: new Float32Array(v),
+      // 每个顶点沿路径的渐变参数，传给片元 shader 控制颜色过渡。
       params: new Float32Array(v),
+      // 每段四边形由 2 个三角形组成，每个三角形 3 个顶点索引，共 6 个索引。
       indices: new Uint32Array(capacity * 6),
     };
   }
@@ -150,6 +149,7 @@ export class PolylineBuilder {
   /** 曲线模式：用 Catmull-Rom 把控制点插值加密成平滑曲线上的密集点。 */
   private getCurvePoints(): Cartesian3[] {
     const pts = this.positions;
+    
     const n = pts.length;
     if (n < 2) return pts.slice();
     if (n < 3) return [pts[0], pts[1]];
@@ -190,7 +190,6 @@ export class PolylineBuilder {
     this.capacity = next;
   }
 
-  /** 把任意点列（此处为曲线密集点）写入预分配缓冲，构造成可渲染的四边形序列。 */
   private buildGeometry(points: Cartesian3[]) {
     const segCount = points.length - 1;
     if (segCount < 1) {
@@ -201,7 +200,7 @@ export class PolylineBuilder {
     if (segCount > this.capacity) this.grow(segCount);
 
     const b = this.buffers;
-    // 沿整条线的归一化参数 t：0=起点，1=终点，用于 shader 里的颜色渐变。
+   
     const denom = segCount > 1 ? segCount - 1 : 1;
     for (let segment = 0; segment < segCount; segment++) {
       const start = points[segment];
@@ -310,19 +309,9 @@ export class PolylineBuilder {
       boundingSphere: this.boundingSphere,
     });
 
-    // 基础 Appearance 不支持自定义 uniforms（那是 Material 体系），
-    // 因此用 #define 把线宽注入着色器源码，LINE_WIDTH_PIXELS 仍是唯一来源。
     const vertexShaderSource = this.surfaceWidthMeters > 0
-      ? `in vec3 position3DHigh;
-         in vec3 position3DLow;
-         in float aParam;
-         in float batchId;
-         out float vParam;
-         void main() {
-           gl_Position = czm_modelViewProjectionRelativeToEye * czm_computePosition();
-           vParam = aParam;
-         }`
-      : `#define LINE_WIDTH ${LINE_WIDTH_PIXELS}.0\n${polylineVertShader}`;
+      ? polylineSurfaceVertShader
+      : polylineVertShader;
 
     return new Primitive({
       geometryInstances: new GeometryInstance({ geometry }),

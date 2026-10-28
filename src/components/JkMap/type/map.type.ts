@@ -3,10 +3,28 @@ import {
   Cartesian2,
   Cartesian3,
   Primitive,
+  GeometryAttributes,
+  GeometryAttribute
 } from "cesium";
 
 // 从 CEvent 的 CustomEvent<T> 中取出载荷类型 T
 export type DetailOf<E> = E extends CustomEvent<infer D> ? D : never;
+
+export type CustomAttributes = GeometryAttributes & Record<string, GeometryAttribute>;
+
+
+export interface LineBuffers {
+  currentPositions: Float64Array;
+  previousHigh: Float32Array;
+  previousLow: Float32Array;
+  nextHigh: Float32Array;
+  nextLow: Float32Array;
+  sides: Float32Array;
+  indices: Uint32Array;
+  params: Float32Array;
+}
+
+
 
 export type RectLike = {
   west: number;
