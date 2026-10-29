@@ -134,140 +134,21 @@ export class PolylineBuilder {
 
   /** 返回当前控制点的副本，供外部记录 / 回显已绘制线段。 */
   getPositions(): Cartesian3[] {
-    return this.positions.slice();
+    return this.positions
   }
 
   addPoint(position: Cartesian3): void {
+
     this.positions.push(position);
   }
 
-  /** 折线模式：直接返回原始控制点，直线段依次相连。 */
-  private getStraightPoints(): Cartesian3[] {
-    return this.positions.slice();
-  }
 
-  /** 曲线模式：用 Catmull-Rom 把控制点插值加密成平滑曲线上的密集点。 */
-  private getCurvePoints(): Cartesian3[] {
-    const pts = this.positions;
-    
-    const n = pts.length;
-    if (n < 2) return pts.slice();
-    if (n < 3) return [pts[0], pts[1]];
-
-    const steps = this.stepsPerSegment;
-    const result: Cartesian3[] = [];
-    for (let i = 0; i < n - 1; i++) {
-      const p0 = pts[Math.max(0, i - 1)];
-      const p1 = pts[i];
-      const p2 = pts[i + 1];
-      const p3 = pts[Math.min(n - 1, i + 2)];
-      // 非末段不含 t=1 的端点，避免与下一段起点重复。
-      const last = i === n - 2;
-      const max = last ? steps : steps - 1;
-      for (let s = 0; s <= max; s++) {
-        result.push(catmullRom(p0, p1, p2, p3, s / steps));
-      }
-    }
-    return result;
-  }
-
-  // 容量不足时翻倍（曲线模式下缓冲会被整体覆盖，拷贝旧数据并非必需但无害）。
-  private grow(minSegments: number) {
-    const next = Math.max(minSegments, this.capacity * 2);
-    const old = this.buffers;
-    const b = this.allocBuffers(next);
-    b.currentPositions.set(
-      old.currentPositions.subarray(0, this.vertexCount * 3),
-    );
-    b.previousHigh.set(old.previousHigh.subarray(0, this.vertexCount * 3));
-    b.previousLow.set(old.previousLow.subarray(0, this.vertexCount * 3));
-    b.nextHigh.set(old.nextHigh.subarray(0, this.vertexCount * 3));
-    b.nextLow.set(old.nextLow.subarray(0, this.vertexCount * 3));
-    b.sides.set(old.sides.subarray(0, this.vertexCount));
-    b.params.set(old.params.subarray(0, this.vertexCount));
-    b.indices.set(old.indices.subarray(0, this.segs * 6));
-    this.buffers = b;
-    this.capacity = next;
-  }
-
-  private buildGeometry(points: Cartesian3[]) {
-    const segCount = points.length - 1;
-    if (segCount < 1) {
-      this.vertexCount = 0;
-      this.segs = 0;
-      return;
-    }
-    if (segCount > this.capacity) this.grow(segCount);
-
-    const b = this.buffers;
-   
-    const denom = segCount > 1 ? segCount - 1 : 1;
-    for (let segment = 0; segment < segCount; segment++) {
-      const start = points[segment];
-      const end = points[segment + 1];
-      const previous = points[Math.max(0, segment - 1)];
-      const next = points[Math.min(points.length - 1, segment + 2)];
-      const firstVertex = segment * 4;
-      for (let corner = 0; corner < 4; corner++) {
-        const vertex = firstVertex + corner;
-        const isEnd = corner >= 2;
-        const current = isEnd ? end : start;
-        const expanded = Cartesian3.clone(current);
-        if (this.surfaceWidthMeters > 0) {
-          const normal = this.ellipsoid.geodeticSurfaceNormal(current, new Cartesian3());
-          const direction = Cartesian3.subtract(
-            this.curved ? (isEnd ? next : end) : end,
-            this.curved ? (isEnd ? start : previous) : start,
-            new Cartesian3(),
-          );
-          const side = Cartesian3.cross(normal, direction, new Cartesian3());
-          if (Cartesian3.magnitudeSquared(side) > 1e-12) {
-            Cartesian3.normalize(side, side);
-            Cartesian3.multiplyByScalar(
-              side,
-              (corner % 2 === 0 ? -1 : 1) * this.surfaceWidthMeters * 0.5,
-              side,
-            );
-            Cartesian3.add(current, side, expanded);
-          }
-        }
-        const base = vertex * 3;
-        b.currentPositions[base] = expanded.x;
-        b.currentPositions[base + 1] = expanded.y;
-        b.currentPositions[base + 2] = expanded.z;
-        writeEncoded(
-          b.previousHigh,
-          b.previousLow,
-          vertex,
-          isEnd ? start : previous,
-        );
-        writeEncoded(b.nextHigh, b.nextLow, vertex, isEnd ? next : end);
-        b.sides[vertex] = corner % 2 === 0 ? -1 : 1;
-        b.params[vertex] = isEnd ? (segment + 1) / denom : segment / denom;
-      }
-      this.buffers.indices.set(
-        [
-          firstVertex,
-          firstVertex + 1,
-          firstVertex + 2,
-          firstVertex + 2,
-          firstVertex + 1,
-          firstVertex + 3,
-        ],
-        segment * 6,
-      );
-    }
-    this.vertexCount = segCount * 4;
-    this.segs = segCount;
-    this.boundingSphere = BoundingSphere.fromPoints(points);
-    this.boundingSphere.radius += Math.max(0, this.surfaceWidthMeters) * 0.5;
-  }
 
   toPrimitive(depthTest = true): Primitive | undefined {
     if (this.positions.length < 2) return undefined;
 
     this.buildGeometry(
-      this.curved ? this.getCurvePoints() : this.getStraightPoints(),
+      this.curved ? this.getCurvePoints() : this.positions,
     );
     if (this.segs < 1) return undefined;
 
@@ -326,6 +207,183 @@ export class PolylineBuilder {
       releaseGeometryInstances: true,
     });
   }
+
+
+  private buildGeometry(points: Cartesian3[]) {
+    // 总片段 总点位 - 1 
+    const segCount = points.length - 1;
+    // 没有片段直接return
+    if (segCount < 1) {
+      this.vertexCount = 0;
+      this.segs = 0;
+      return;
+    }
+
+    // 总片段大于容量空间 增加一倍容量
+    if (segCount > this.capacity) this.grow(segCount);
+
+    const b = this.buffers;
+
+    const denom = segCount > 1 ? segCount : 1;
+
+
+    for (let segment = 0; segment < segCount; segment++) {
+
+      // 每个片段的起点
+      const start = points[segment];  // 0 1 2
+      // 每个片段的终点 
+      const end = points[segment + 1]; // 1  2 3 
+
+
+
+      const previous = points[Math.max(0, segment - 1)]; // 0 0 1
+      const next = points[Math.min(points.length - 1, segment + 2)]; // 2 3 4
+
+
+
+      const firstVertex = segment * 4;
+
+
+      for (let corner = 0; corner < 4; corner++) {
+        const vertex = firstVertex + corner;
+        const isEnd = corner >= 2;
+
+
+        const current = isEnd ? end : start;
+        const expanded = Cartesian3.clone(current);
+
+
+
+        if (this.surfaceWidthMeters > 0) {
+          // 获取当地椭球法线  当地地表向上方向
+          const normal = this.ellipsoid.geodeticSurfaceNormal(current, new Cartesian3());
+
+
+          let directionEnd = end;
+          let directionStart = start;
+
+          if (this.curved) {
+            if (isEnd) {
+              directionEnd = next;
+              directionStart = start;
+            } else {
+              directionEnd = end;
+              directionStart = previous;
+            }
+          }
+
+
+          // 沿路径向前方向  Cartesian3.subtract 减法（起点指向终点的方向向量）
+          const direction = Cartesian3.subtract(
+            directionEnd,
+            directionStart,
+            new Cartesian3(),
+          );
+
+
+
+          // 根据两个方向，求出一个同时垂直于它们的新方向，侧面
+          // normal 地表向上方向
+          // direction 沿路径向前方向
+          // side 侧面
+          const side = Cartesian3.cross(normal, direction, new Cartesian3());
+
+
+
+          if (Cartesian3.magnitudeSquared(side) > 1e-12) {
+
+            // 归一化
+            Cartesian3.normalize(side, side);
+
+            
+            Cartesian3.multiplyByScalar(
+              side,
+              (corner % 2 === 0 ? -1 : 1) * this.surfaceWidthMeters * 0.5,
+              side,
+            );
+            Cartesian3.add(current, side, expanded);
+          }
+        }
+        const base = vertex * 3;
+        b.currentPositions[base] = expanded.x;
+        b.currentPositions[base + 1] = expanded.y;
+        b.currentPositions[base + 2] = expanded.z;
+        writeEncoded(
+          b.previousHigh,
+          b.previousLow,
+          vertex,
+          isEnd ? start : previous,
+        );
+        writeEncoded(b.nextHigh, b.nextLow, vertex, isEnd ? next : end);
+        b.sides[vertex] = corner % 2 === 0 ? -1 : 1;
+        b.params[vertex] = isEnd ? (segment + 1) / denom : segment / denom;
+      }
+      this.buffers.indices.set(
+        [
+          firstVertex,
+          firstVertex + 1,
+          firstVertex + 2,
+          firstVertex + 2,
+          firstVertex + 1,
+          firstVertex + 3,
+        ],
+        segment * 6,
+      );
+    }
+    this.vertexCount = segCount * 4;
+    this.segs = segCount;
+    this.boundingSphere = BoundingSphere.fromPoints(points);
+    this.boundingSphere.radius += Math.max(0, this.surfaceWidthMeters) * 0.5;
+  }
+
+
+  /** 曲线模式：用 Catmull-Rom 把控制点插值加密成平滑曲线上的密集点。 */
+  private getCurvePoints(): Cartesian3[] {
+    const pts = this.positions;
+
+    const n = pts.length;
+
+    if (n < 2) return pts
+    if (n < 3) return [pts[0], pts[1]];
+
+    const steps = this.stepsPerSegment;
+    const result: Cartesian3[] = [];
+    for (let i = 0; i < n - 1; i++) {
+      const p0 = pts[Math.max(0, i - 1)];
+      const p1 = pts[i];
+      const p2 = pts[i + 1];
+      const p3 = pts[Math.min(n - 1, i + 2)];
+      // 非末段不含 t=1 的端点，避免与下一段起点重复。
+      const last = i === n - 2;
+      const max = last ? steps : steps - 1;
+      for (let s = 0; s <= max; s++) {
+        result.push(catmullRom(p0, p1, p2, p3, s / steps));
+      }
+    }
+    return result;
+  }
+
+  // 容量不足时翻倍（曲线模式下缓冲会被整体覆盖，拷贝旧数据并非必需但无害）。
+  private grow(minSegments: number) {
+    const next = Math.max(minSegments, this.capacity * 2);
+    const old = this.buffers;
+    const b = this.allocBuffers(next);
+    b.currentPositions.set(
+      old.currentPositions.subarray(0, this.vertexCount * 3),
+    );
+    b.previousHigh.set(old.previousHigh.subarray(0, this.vertexCount * 3));
+    b.previousLow.set(old.previousLow.subarray(0, this.vertexCount * 3));
+    b.nextHigh.set(old.nextHigh.subarray(0, this.vertexCount * 3));
+    b.nextLow.set(old.nextLow.subarray(0, this.vertexCount * 3));
+    b.sides.set(old.sides.subarray(0, this.vertexCount));
+    b.params.set(old.params.subarray(0, this.vertexCount));
+    b.indices.set(old.indices.subarray(0, this.segs * 6));
+    this.buffers = b;
+    this.capacity = next;
+  }
+
+
+
 
   reset(): void {
     this.positions = [];
