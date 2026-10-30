@@ -14,7 +14,10 @@
   "dependencies": {
     "@types/three": "^0.186.0",
     "cesium": "^1.145.0",
+    "pako": "2.1.0",
     "pinia": "2.2.1",
+    "protobufjs": "7.6.6",
+    "tdt-terrain-cesium-plugin": "1.0.4",
     "three": "^0.186.1",
     "vue": "3.3.13",
     "vue-router": "4.5.1"

@@ -1,9 +1,11 @@
 import { Cartesian3 } from "cesium";
 import { JkBase } from "./base";
 import { JkLayer } from "./layer";
+import { JkCamera } from "./camera";
 
 export class JkMap extends JkBase {
   readonly layer: JkLayer;
+  readonly camera: JkCamera;
 
   constructor(container: HTMLElement, config: AppConfig) {
     super(container);
@@ -12,9 +14,11 @@ export class JkMap extends JkBase {
     this.viewer.camera.setView({
       destination: Cartesian3.fromDegrees(longitude, latitude, height),
     });
+    this.camera = new JkCamera(this.viewer);
   }
 
   destroy() {
+    this.camera.destroy();
     this.layer.destroy();
     super.destroy();
   }
