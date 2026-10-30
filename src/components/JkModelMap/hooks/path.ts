@@ -86,6 +86,8 @@ export class JkPath extends JkBase {
     if (this.destroyed || this.viewer.isDestroyed()) return;
     const positions = this.builder.getPositions();
     const previous = positions[positions.length - 1];
+
+    
     if (previous && Cartesian3.distanceSquared(previous, position) < 0.0001)
       return;
 
