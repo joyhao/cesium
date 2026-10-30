@@ -9,6 +9,7 @@ declare module 'vue' {
   export interface GlobalComponents {
     AddPointDialog: typeof import('./components/JkMap/AddPointDialog.vue')['default']
     JkCar: typeof import('./components/JkCar/JkCar.vue')['default']
+    JkHeatMap: typeof import('./components/JkHeatMap/JkHeatMap.vue')['default']
     JkMap: typeof import('./components/JkMap/JkMap.vue')['default']
     JkModelMap: typeof import('./components/JkModelMap/JkModelMap.vue')['default']
     PointHoverActions: typeof import('./components/JkMap/PointHoverActions.vue')['default']

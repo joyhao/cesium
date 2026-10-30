@@ -2,7 +2,7 @@
 export const routes = [
   {
     path: "/",
-    redirect: "/model-map",
+    redirect: "/heat-map",
     meta: { hidden: true },
   },
   {
@@ -16,6 +16,12 @@ export const routes = [
     name: "map",
     component: () => import("../views/MapView/MapView.vue"),
     meta: { title: "地图演示", icon: "◉" },
+  },
+  {
+    path: "/heat-map",
+    name: "heatMap",
+    component: () => import("../views/HeatMap/HeatMap.vue"),
+    meta: { title: "立体热力图", icon: "◉" },
   },
   {
     path: "/model-map",
