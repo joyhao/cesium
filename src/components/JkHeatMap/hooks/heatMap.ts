@@ -1,5 +1,5 @@
 import { Cartesian3, Matrix4, PrimitiveCollection, Transforms, Viewer } from "cesium";
-import type { HeatMapBounds, HeatMapLocalData, HeatMapPoint } from "../type/heatMap.type";
+import type { HeatMapBounds, HeatMapGrid, HeatMapLocalData, HeatMapPoint } from "../type/heatMap.type";
 
 export class JkHeatMap {
     private readonly primitives: PrimitiveCollection;
@@ -94,6 +94,57 @@ export class JkHeatMap {
             return { x: local.x, y: local.y, z: local.z, value: point.value };
         });
         return { modelMatrix, points };
+    }
+
+    /**
+        创建网格
+     */
+    createGrid(spacing = 200): HeatMapGrid | undefined {
+        // 获取转换完的相对坐标
+        const localData = this.getLocalData();
+        if (!localData) return undefined;
+
+        let minX = Infinity;
+        let maxX = -Infinity;
+        let minY = Infinity;
+        let maxY = -Infinity;
+        for (const point of localData.points) {
+            minX = Math.min(minX, point.x);
+            maxX = Math.max(maxX, point.x);
+            minY = Math.min(minY, point.y);
+            maxY = Math.max(maxY, point.y);
+        }
+
+        // 向外取整以覆盖所有采样点；至少保留两行、两列节点，避免退化为线或点。
+
+        
+        minX = Math.floor(minX / spacing) * spacing;
+        minY = Math.floor(minY / spacing) * spacing;
+
+        
+        const columns = Math.max(2, Math.ceil((maxX - minX) / spacing) + 1);
+        const rows = Math.max(2, Math.ceil((maxY - minY) / spacing) + 1);
+        const count = columns * rows;
+        if (!Number.isSafeInteger(count) || count > 1_000_000) {
+            throw new Error("热力图网格超过 100 万个节点，请增大网格间距");
+        }
+        maxX = minX + (columns - 1) * spacing;
+        maxY = minY + (rows - 1) * spacing;
+
+        // 一行内先沿 X 向东排列，再沿 Y 向北换行；每个节点连续占用三个坐标槽位。
+        const positions = new Float64Array(count * 3);
+        for (let row = 0; row < rows; row++) {
+            for (let column = 0; column < columns; column++) {
+                const offset = (row * columns + column) * 3;
+                positions[offset] = minX + column * spacing;
+                positions[offset + 1] = minY + row * spacing;
+                positions[offset + 2] = 0;
+            }
+        }
+        return {
+            modelMatrix: localData.modelMatrix,
+            columns, rows, spacing, minX, maxX, minY, maxY, positions,
+        };
     }
 
     /** 

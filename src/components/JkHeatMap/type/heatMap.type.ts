@@ -52,3 +52,20 @@ export interface HeatMapLocalData {
   modelMatrix: Matrix4;
   points: HeatMapLocalPoint[];
 }
+
+/**
+ * 规则网格结果，按行存储：节点索引 = 行号 * columns + 列号。
+ * positions 依次保存每个节点的 x、y、z，单位米；当前 z 为 0，尚未计算曲面高度。
+ * columns、rows 为节点数，不是网格单元数；modelMatrix 用于将网格放回世界空间。
+ */
+export interface HeatMapGrid {
+  modelMatrix: Matrix4;
+  columns: number;
+  rows: number;
+  spacing: number;
+  minX: number;
+  maxX: number;
+  minY: number;
+  maxY: number;
+  positions: Float64Array;
+}

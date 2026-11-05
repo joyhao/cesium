@@ -35,11 +35,12 @@ onMounted(() => {
   if (!container.value || !config) return;
   map = new JkMap(container.value, config);
   /**
-   * 暂时只传入演示数据并输出计算结果，方便调试，不创建热力网格。
+   * 传入演示数据并计算局部坐标和规则网格，输出结果供断点调试。
+   * 当前仅生成网格数据，不创建渲染图元。
    */
   map.heatMap.setData(heatMapStore.points);
-  console.log("热力图数据范围", map.heatMap.getBounds());
-  console.log("热力图 ENU 局部坐标", map.heatMap.getLocalData());
+ 
+  const grid = map.heatMap.createGrid(200);
   map.camera.onChange((state) => Object.assign(info, state));
 });
 
