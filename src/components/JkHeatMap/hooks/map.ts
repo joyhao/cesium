@@ -2,10 +2,15 @@ import { Cartesian3, Math as CesiumMath } from "cesium";
 import { JkBase } from "./base";
 import { JkLayer } from "./layer";
 import { JkCamera } from "./camera";
+import { JkHeatMap } from "./heatMap";
 
 export class JkMap extends JkBase {
   readonly layer: JkLayer;
   readonly camera: JkCamera;
+  /**
+   * 立体热力图模块，供外部传入数据、读取范围和调试坐标转换。
+   */
+  readonly heatMap: JkHeatMap;
 
   constructor(container: HTMLElement, config: AppConfig) {
     super(container);
@@ -20,9 +25,12 @@ export class JkMap extends JkBase {
       },
     });
     this.camera = new JkCamera(this.viewer);
+    this.heatMap = new JkHeatMap(this.viewer);
   }
 
   destroy() {
+    // 先释放热力图图元，再由基类销毁 Viewer。
+    this.heatMap.destroy();
     this.camera.destroy();
     this.layer.destroy();
     super.destroy();

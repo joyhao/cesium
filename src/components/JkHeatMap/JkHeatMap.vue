@@ -19,6 +19,9 @@
 <script setup lang="ts">
 import type { CameraInfo } from "./type/camera.type";
 import { JkMap } from "./hooks/map";
+import { useHeatMap } from "../../stores/heatMap";
+
+const heatMapStore = useHeatMap();
 
 const info = reactive<CameraInfo>({
   longitude: 0, latitude: 0, height: 0,
@@ -31,6 +34,12 @@ let map: JkMap | undefined;
 onMounted(() => {
   if (!container.value || !config) return;
   map = new JkMap(container.value, config);
+  /**
+   * 暂时只传入演示数据并输出计算结果，方便调试，不创建热力网格。
+   */
+  map.heatMap.setData(heatMapStore.points);
+  console.log("热力图数据范围", map.heatMap.getBounds());
+  console.log("热力图 ENU 局部坐标", map.heatMap.getLocalData());
   map.camera.onChange((state) => Object.assign(info, state));
 });
 
