@@ -13,6 +13,15 @@ interface AppConfig {
     pitch: number;
   };
 
+  heartMapCameraView: {
+    longitude: number;
+    latitude: number;
+    height: number;
+    level: number;
+    heading: number;
+    pitch: number;
+    roll: number;
+  };
   vector: string;
   cia: string;
   subdomains: string[];
