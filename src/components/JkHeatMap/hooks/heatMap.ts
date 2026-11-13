@@ -115,19 +115,24 @@ export class JkHeatMap {
             maxY = Math.max(maxY, point.y);
         }
 
-        // 向外取整以覆盖所有采样点；至少保留两行、两列节点，避免退化为线或点。
 
         
+        //  这行是把网格左边界向下吸附到 spacing 的整数倍，也叫网格对齐 ，向下兼容最小数据
         minX = Math.floor(minX / spacing) * spacing;
         minY = Math.floor(minY / spacing) * spacing;
 
-        
+        // 单元格 为什么+1  向外扩展一个单元格 防止数据溢出
         const columns = Math.max(2, Math.ceil((maxX - minX) / spacing) + 1);
         const rows = Math.max(2, Math.ceil((maxY - minY) / spacing) + 1);
+  
+        
         const count = columns * rows;
         if (!Number.isSafeInteger(count) || count > 1_000_000) {
             throw new Error("热力图网格超过 100 万个节点，请增大网格间距");
         }
+
+
+        // 右上角
         maxX = minX + (columns - 1) * spacing;
         maxY = minY + (rows - 1) * spacing;
 
@@ -135,6 +140,7 @@ export class JkHeatMap {
         const positions = new Float64Array(count * 3);
         for (let row = 0; row < rows; row++) {
             for (let column = 0; column < columns; column++) {
+                // row * columns  换行偏移
                 const offset = (row * columns + column) * 3;
                 positions[offset] = minX + column * spacing;
                 positions[offset + 1] = minY + row * spacing;
